@@ -1,12 +1,12 @@
 import sys
+import socket
+import hashlib
 import webbrowser
 from PyQt5 import QtWidgets
 from PyQt5.QtWidgets import QDialog, QApplication
 from PyQt5.uic import loadUi
-import socket
-import hashlib
+from os import getenv
 from dotenv import load_dotenv
-import os
 
 CLIENT = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
@@ -19,38 +19,44 @@ class LoginPage(QDialog):
 
 
     def login_function(self):
-        global CLIENT                                                           # GET MOST RECENT CLIENT DEFINTION                                     
-        username = str(self.username_line_edit.text())                          # GET VARIABLES FROM GUI
+        global CLIENT                                  
+        username = str(self.username_line_edit.text())
         password = str(self.password_line_edit.text())
-        enc_password = hashlib.sha256(password.encode()).hexdigest()            # ENCRYPT THE PASSWORD (CLIENT SIDE HASHING)
+        enc_password = hashlib.sha256(password.encode()).hexdigest()
         self.username_line_edit.setText("")
         self.password_line_edit.setText("")
 
         if username != "" and password !="":
             CLIENT.send(username.encode())
             CLIENT.send(enc_password.encode())
-            print(CLIENT.recv(1024).decode())
-            CLIENT.shutdown(socket.SHUT_RDWR)                                   # SHUTDOWN SOCKET TO GAURENTEE DATA TRANSFER
-            CLIENT.close()                                                      # CLOSE THE SOCKET
-            CLIENT = socket.socket(socket.AF_INET, socket.SOCK_STREAM)          # RE-DEFINE THE SOCKET
-            CLIENT.connect((os.getenv("pub_Ip"), int(os.getenv("pub_port"))))   # GIVE CONNECTION ADDRESS TO SOCKET
+
+            response = CLIENT.recv(1024).decode()
+            if response == "True":
+                #Switch to main screen and keep connection open
+                print("Success")
+            else:
+                CLIENT.shutdown(socket.SHUT_RDWR)
+                CLIENT.close()
+                CLIENT = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                CLIENT.connect((getenv("pub_Ip"), int(getenv("pub_port"))))
+                print("Failed")
         else:
             print("Verification failed! (Local)")
 
-    
+
     def open_linkedin(self):
         webbrowser.open('www.linkedin.com/in/kolby-macdonald')
 
 
-def configure():
+def env_configure():
     load_dotenv()
 
 
 def main():
 
-    configure()
+    env_configure()
 
-    CLIENT.connect((os.getenv("pub_Ip"), int(os.getenv("pub_port"))))
+    CLIENT.connect((getenv("pub_Ip"), int(getenv("pub_port"))))
 
     app=QApplication(sys.argv)
     mainwindow = LoginPage()

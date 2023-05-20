@@ -26,11 +26,11 @@ def handle_connection(c):
         )
 
     if cursor.fetchall():
-        c.send("Verification successful".encode())
+        c.send("True".encode())
         print(f"{credentials[0].decode()} has accessed the database.")
         #Services go here
     else:
-        c.send("Verification failed! (Remote)".encode())
+        c.send("False".encode())
         print(f"{credentials[0].decode()} has failed to access the database.")
 
 
