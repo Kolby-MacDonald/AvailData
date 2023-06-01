@@ -13,7 +13,8 @@ CLIENT = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 class LoginPage(QDialog):
     def __init__(self):
         super(LoginPage,self).__init__()
-        loadUi(r'C:\Users\deadb\Documents\GitHub\AvailData\login_page\login_page.ui',self)
+        #loadUi(r'C:\Users\deadb\Documents\GitHub\AvailData\login_page\login_page.ui',self)
+        loadUi(r'C:\Users\deadb\Documents\GitHub\AvailData-Public\Client\pages\login_page.ui',self)
         self.login_button.clicked.connect(self.login_function)
         self.linkedin_button.clicked.connect(self.open_linkedin)
 
@@ -32,7 +33,7 @@ class LoginPage(QDialog):
 
             response = CLIENT.recv(1024).decode()
             if response == "True":
-                #Switch to main screen and keep connection open
+                self.open_user_page()
                 print("Success")
             else:
                 CLIENT.shutdown(socket.SHUT_RDWR)
@@ -47,26 +48,31 @@ class LoginPage(QDialog):
     def open_linkedin(self):
         webbrowser.open('www.linkedin.com/in/kolby-macdonald')
 
+    def open_user_page(self):
+        userwindow = UserPage()
+        widget.removeWidget(loginwindow)
+        widget.addWidget(userwindow)
+        #widget.setCurrentIndex(widget.currentIndex()+1) 
+
+class UserPage(QDialog):
+    def __init__(self):
+        super(UserPage, self).__init__()
+        loadUi(r'C:\Users\deadb\Documents\GitHub\AvailData-Public\Client\pages\user_page_test.ui',self)
+
 
 def env_configure():
     load_dotenv()
 
 
-def main():
+env_configure()
+CLIENT.connect((getenv("pub_Ip"), int(getenv("pub_port"))))
 
-    env_configure()
-
-    CLIENT.connect((getenv("pub_Ip"), int(getenv("pub_port"))))
-
-    app=QApplication(sys.argv)
-    mainwindow = LoginPage()
-    widget=QtWidgets.QStackedWidget()
-    widget.addWidget(mainwindow)
-    widget.resize(1080,720)
-    widget.setMaximumWidth(1920)
-    widget.setMaximumHeight(1080)
-    widget.show()
-    app.exec_()
-
-
-main()
+app=QApplication(sys.argv)
+widget=QtWidgets.QStackedWidget()
+loginwindow = LoginPage()
+widget.addWidget(loginwindow)
+widget.resize(1080,720)
+widget.setMaximumWidth(1920)
+widget.setMaximumHeight(1080)
+widget.show()
+app.exec_()
