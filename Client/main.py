@@ -2,11 +2,11 @@ import sys
 import socket
 import hashlib
 import webbrowser
-from PyQt5 import QtWidgets
-from PyQt5.QtWidgets import QDialog, QApplication
-from PyQt5.uic import loadUi
 from os import getenv
+from PyQt5 import QtWidgets
+from PyQt5.uic import loadUi
 from dotenv import load_dotenv
+from PyQt5.QtWidgets import QDialog, QApplication
 
 # Define our client.
 CLIENT = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -52,6 +52,8 @@ class LoginPage(QDialog):
             if response == "True": # If the server has the requested user in the specific table.
                 self.open_user_page() # Open the main application window.
                 print("Success")
+                data_test = CLIENT.recv(1024).decode()
+                print(data_test)
             else: # If the server does not have the requested data.
                 CLIENT.shutdown(socket.SHUT_RDWR) # Restart the socket.
                 CLIENT.close()
@@ -78,16 +80,6 @@ class UserPage(QDialog):
     def __init__(self):
         super(UserPage, self).__init__()
         loadUi(r'Client\pages\user_page_test.ui', self) # Load the corresponding ui.
-
-    #send request udpate_available_tables
-    
-    #send request update_results_selection
-
-    #send request load_table_data
-
-    #format table_data into a pd
-
-    #send the table_data into 
 
 
 

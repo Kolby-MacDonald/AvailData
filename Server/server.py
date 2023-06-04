@@ -1,8 +1,11 @@
-import socket
-import mysql.connector
-import threading
-from dotenv import load_dotenv
 import os
+import socket
+import threading
+import pandas as pd
+import mysql.connector
+from datetime import datetime
+from Crypto.Cipher import AES
+from dotenv import load_dotenv
 
 
 def handle_connection(c):
@@ -31,48 +34,49 @@ def handle_connection(c):
         user_name = results[1]
         user_pass = results[2]
         user_table_access = results[3]
-        print(f'user_id = {user_id}')
-        print(f'user_name = {user_name}')
-        print(f'user_table_access = {user_table_access}')
-        print("Inputed username = " + credentials[0].decode())
     except:
         pass
 
     if results:
         c.send("True".encode())
         print(f"{user_name} has accessed the database.")
-        handle_requests(c)
+        data_response(c, cursor, user_name, user_pass, user_table_access)
     else:
         c.send("False".encode())
         print(f"{credentials[0].decode()} has failed to access the database.")
 
     
 
-def handle_requests(c):
-    #Structure of requests:
-    #str(list(
-    # 0: request type
-    # 1: parameters list ()
-    # ))
+def data_response(c, cursor, user_name, user_pass, user_table_access):
+    cursor.execute(f'''SHOW TABLES''')
+    database_table_names = cursor.fetchall()
+    if user_table_access == "all":
+        user_table_response = database_table_names
+    else:
+        apparent_table_names = user_table_access.split(',', 1)
+        for item in apparent_table_names:
+            if item not in database_table_names:
+                apparent_table_names.remove(item)
+        user_table_response = apparent_table_names
+    
+    print(user_table_response)
+    cursor.execute(f'''SELECT * FROM {os.getenv("db_table_name")}''')
+    df = pd.DataFrame(cursor.fetchall())
+    #df = df.applymap(str)
+    df = df.astype(str)
+    print(df)
+    c.send(f"{df}".encode())
 
-    #Structure of response is dependant on request
-
-    request_type = c.recv(1024)
-
-    if request_type[0] == "update_available_tables":
-        #get available tables from user table
-
-        #if not = "all" then return a string of specific tables
 
     
+    
+    # key_aes = user_name
+    # nonce_aes = user_pass
 
-        #format into a list
+    # cipher_aes = AES.new(key_aes, AES.MODE_EAX, nonce_aes)
 
-        #
-        pass
-    elif request_type[0] == "update_results_selection":
-        
-        pass
+
+    
 
        
 
