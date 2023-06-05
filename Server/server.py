@@ -3,15 +3,14 @@ import socket
 import threading
 import pandas as pd
 import mysql.connector
-from datetime import datetime
-from Crypto.Cipher import AES
 from dotenv import load_dotenv
 
 
-def handle_connection(c):
-    credentials = []
-    while len(credentials) != 2:
-        credentials.append(c.recv(1024))
+# Primary function controller.
+def server_controller(server): 
+    
+    username = server.recv(1024)
+    password = server.recv(1024)
 
     db = mysql.connector.connect(
         host=os.getenv("db_host"), 
@@ -21,11 +20,11 @@ def handle_connection(c):
         )
     
     cursor = db.cursor()
-    print(f"{credentials[0].decode()} is attempting access to the database.")
+    print(f"{username.decode()} is attempting access to the database.")
 
     cursor.execute(
         f'''SELECT * FROM {os.getenv("db_table_name")} where username = %s and password = %s''',
-        (credentials[0].decode(), credentials[1].decode())
+        (username.decode(), password.decode())
         )
     
     try:
@@ -38,47 +37,48 @@ def handle_connection(c):
         pass
 
     if results:
-        c.send("True".encode())
+        server.send("True".encode())
         print(f"{user_name} has accessed the database.")
-        data_response(c, cursor, user_name, user_pass, user_table_access)
+        init_data_response(server, cursor, user_name, user_pass, user_table_access)
     else:
-        c.send("False".encode())
-        print(f"{credentials[0].decode()} has failed to access the database.")
+        server.send("False".encode())
+        print(f"{username.decode()} has failed to access the database.")
 
     
 
-def data_response(c, cursor, user_name, user_pass, user_table_access):
+def init_data_response(server, cursor, user_name, user_pass, user_table_access):
     cursor.execute(f'''SHOW TABLES''')
     database_table_names = cursor.fetchall()
+
+
     if user_table_access == "all":
-        user_table_response = database_table_names
+        user_table_names = ''
+        for i, tup in enumerate(database_table_names):
+            user_table_names += tup[0] + ','
     else:
-        apparent_table_names = user_table_access.split(',', 1)
-        for item in apparent_table_names:
-            if item not in database_table_names:
-                apparent_table_names.remove(item)
-        user_table_response = apparent_table_names
-    
-    print(user_table_response)
-    cursor.execute(f'''SELECT * FROM {os.getenv("db_table_name")}''')
-    df = pd.DataFrame(cursor.fetchall())
-    #df = df.applymap(str)
-    df = df.astype(str)
-    print(df)
-    c.send(f"{df}".encode())
+        try:
+            apparent_table_names = user_table_access.split(', ')
+            user_table_names = ''
+            for i, tup in enumerate(database_table_names):
+                if tup[0] in apparent_table_names:
+                    user_table_names += tup[0] + ','
+        except:
+            user_table_names = ''
 
+    if user_table_names != '':
+        user_table_names = user_table_names[:-1]
+        print(user_table_names)
 
-    
-    
-    # key_aes = user_name
-    # nonce_aes = user_pass
+        cursor.execute(f'''SELECT * FROM {os.getenv("db_table_name")}''')
+        df = pd.DataFrame(cursor.fetchall())
+        df = df.astype(str)
+        print(df)
 
-    # cipher_aes = AES.new(key_aes, AES.MODE_EAX, nonce_aes)
+        #ENCRYPT DATA HERE
 
-
-    
-
-       
+        server.send(f"{user_table_names}".encode())
+        server.send(f"{df}".encode())
+  
 
 def main():
     load_dotenv()
@@ -89,9 +89,8 @@ def main():
     print("Server listening.")
 
     while True:
-        client, addr = server_socket.accept()
+        server, addr = server_socket.accept()
         print(f"incoming connection by: {addr}")
-        threading.Thread(target=handle_connection, args=(client,)).start()
-
+        threading.Thread(target=server_controller, args=(server,)).start()
 
 main()

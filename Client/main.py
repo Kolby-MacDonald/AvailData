@@ -2,6 +2,7 @@ import sys
 import socket
 import hashlib
 import webbrowser
+import pandas as pd
 from os import getenv
 from PyQt5 import QtWidgets
 from PyQt5.uic import loadUi
@@ -38,7 +39,7 @@ class LoginPage(QDialog):
         # Send the data to the server and wait for a response.
         if username != "" and password !="":
 
-            #LOCALLY ENCRYPT THE DATA HERE
+            #ENCRYPT DATA HERE
 
             #Encode and send the data
             CLIENT.send(username.encode())
@@ -48,12 +49,16 @@ class LoginPage(QDialog):
             response = CLIENT.recv(1024).decode()
 
             # Response based functionality.
-            # If somehow intercepted and bypassed by reverse engineering, the user access controll will prevent user data leaks.
+            # If somehow intercepted and bypassed by reverse engineering, the user access control will prevent user data leaks.
             if response == "True": # If the server has the requested user in the specific table.
+
                 self.open_user_page() # Open the main application window.
-                print("Success")
+                user_table_names = CLIENT.recv(1024).decode() #
+                print(user_table_names)
                 data_test = CLIENT.recv(1024).decode()
                 print(data_test)
+
+
             else: # If the server does not have the requested data.
                 CLIENT.shutdown(socket.SHUT_RDWR) # Restart the socket.
                 CLIENT.close()
@@ -81,10 +86,6 @@ class UserPage(QDialog):
         super(UserPage, self).__init__()
         loadUi(r'Client\pages\user_page_test.ui', self) # Load the corresponding ui.
 
-
-
-
-# Main Script:
 
 # Pre application requirements
 load_dotenv() # Load the environment variables.
