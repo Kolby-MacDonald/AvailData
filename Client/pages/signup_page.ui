@@ -9,12 +9,12 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1222</width>
-    <height>820</height>
+    <width>730</width>
+    <height>652</height>
    </rect>
   </property>
   <property name="sizePolicy">
-   <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+   <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
     <horstretch>0</horstretch>
     <verstretch>0</verstretch>
    </sizepolicy>
@@ -26,11 +26,11 @@
    </size>
   </property>
   <property name="windowTitle">
-   <string notr="true">[ AvailData ] Login Page - Welcome!</string>
+   <string>[ AvailData ] Signup Page - Nice to meet you!</string>
   </property>
   <property name="styleSheet">
    <string notr="true">#Form{
-background-image: url(C:/Users/deadb/Documents/GitHub/AvailData/login_page/login_photos/login_background.jpg);
+background-image: url(C:/Users/deadb/Documents/GitHub/AvailData-Public/Client/login_photos/signup_background.jpg);
 background-position: center;
 }</string>
   </property>
@@ -49,14 +49,8 @@ background-position: center;
      <property name="minimumSize">
       <size>
        <width>360</width>
-       <height>331</height>
+       <height>445</height>
       </size>
-     </property>
-     <property name="font">
-      <font>
-       <family>Trebuchet MS</family>
-       <pointsize>1</pointsize>
-      </font>
      </property>
      <property name="styleSheet">
       <string notr="true">*{
@@ -75,6 +69,21 @@ QTextEdit
 background-color: transparent;
 color: transparent;
 }
+
+
+QLabel
+{
+background-color: transparent;
+color: rgb(0, 255, 0);
+font-size:60px;
+}
+
+QLabel:hover
+{
+color: transparent;
+background-image: url(&quot;C:/Users/deadb/Documents/GitHub/AvailData/login_page/hidden_masthead.png&quot;);
+}
+
 
 QLineEdit
 {
@@ -119,14 +128,14 @@ border-radius:60px;
      <property name="frameShadow">
       <enum>QFrame::Raised</enum>
      </property>
-     <widget class="QPushButton" name="login_button">
+     <widget class="QPushButton" name="submit_button">
       <property name="enabled">
        <bool>true</bool>
       </property>
       <property name="geometry">
        <rect>
         <x>230</x>
-        <y>260</y>
+        <y>380</y>
         <width>101</width>
         <height>41</height>
        </rect>
@@ -135,7 +144,7 @@ border-radius:60px;
        <cursorShape>PointingHandCursor</cursorShape>
       </property>
       <property name="text">
-       <string>Sign In</string>
+       <string>Submit</string>
       </property>
      </widget>
      <widget class="QLineEdit" name="username_line_edit">
@@ -167,7 +176,7 @@ border-radius:60px;
       <property name="geometry">
        <rect>
         <x>20</x>
-        <y>200</y>
+        <y>270</y>
         <width>321</width>
         <height>41</height>
        </rect>
@@ -182,17 +191,94 @@ border-radius:60px;
        <set>Qt::AlignCenter</set>
       </property>
       <property name="placeholderText">
-       <string>Password</string>
+       <string>Strong Password</string>
       </property>
      </widget>
-     <widget class="QPushButton" name="signup_button">
+     <widget class="QLineEdit" name="confirm_password_line_edit">
+      <property name="geometry">
+       <rect>
+        <x>20</x>
+        <y>320</y>
+        <width>321</width>
+        <height>41</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string/>
+      </property>
+      <property name="echoMode">
+       <enum>QLineEdit::Password</enum>
+      </property>
+      <property name="alignment">
+       <set>Qt::AlignCenter</set>
+      </property>
+      <property name="placeholderText">
+       <string>Confirm Password</string>
+      </property>
+     </widget>
+     <widget class="QLineEdit" name="email_line_edit">
+      <property name="geometry">
+       <rect>
+        <x>20</x>
+        <y>200</y>
+        <width>321</width>
+        <height>41</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string/>
+      </property>
+      <property name="echoMode">
+       <enum>QLineEdit::Normal</enum>
+      </property>
+      <property name="alignment">
+       <set>Qt::AlignCenter</set>
+      </property>
+      <property name="placeholderText">
+       <string>Email</string>
+      </property>
+     </widget>
+     <widget class="QPushButton" name="hidden_button">
+      <property name="enabled">
+       <bool>false</bool>
+      </property>
+      <property name="geometry">
+       <rect>
+        <x>0</x>
+        <y>30</y>
+        <width>360</width>
+        <height>70</height>
+       </rect>
+      </property>
+      <property name="font">
+       <font>
+        <family>Trebuchet MS</family>
+        <pointsize>-1</pointsize>
+       </font>
+      </property>
+      <property name="cursor">
+       <cursorShape>ArrowCursor</cursorShape>
+      </property>
+      <property name="styleSheet">
+       <string notr="true">QPushButton
+{
+background-color: transparent;
+color: rgb(0, 255, 0);
+font-size: 55px;
+}</string>
+      </property>
+      <property name="text">
+       <string>[ Sign Up ]</string>
+      </property>
+     </widget>
+     <widget class="QPushButton" name="return_button">
       <property name="enabled">
        <bool>true</bool>
       </property>
       <property name="geometry">
        <rect>
         <x>30</x>
-        <y>260</y>
+        <y>380</y>
         <width>101</width>
         <height>41</height>
        </rect>
@@ -201,37 +287,7 @@ border-radius:60px;
        <cursorShape>PointingHandCursor</cursorShape>
       </property>
       <property name="text">
-       <string>Sign Up</string>
-      </property>
-     </widget>
-     <widget class="QPushButton" name="linkedin_button">
-      <property name="geometry">
-       <rect>
-        <x>0</x>
-        <y>40</y>
-        <width>361</width>
-        <height>71</height>
-       </rect>
-      </property>
-      <property name="cursor">
-       <cursorShape>PointingHandCursor</cursorShape>
-      </property>
-      <property name="styleSheet">
-       <string notr="true">QPushButton
-{
-background-color: transparent;
-color: rgb(0, 255, 0);
-font-size:60px;
-}
-
-QPushButton:hover
-{
-color: transparent;
-background-image: url(&quot;C:/Users/deadb/Documents/GitHub/AvailData/login_page/login_photos/hidden_masthead.png&quot;);
-}</string>
-      </property>
-      <property name="text">
-       <string>[ AvailData ]</string>
+       <string>Return</string>
       </property>
      </widget>
     </widget>
