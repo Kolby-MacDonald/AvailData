@@ -110,6 +110,8 @@ class UserPage(QDialog):
     def __init__(self):
         super(UserPage, self).__init__()
         loadUi(r'Client\pages\user_page_test.ui', self) # Load the corresponding ui.
+        #table_select_combobox
+        #result_select_combobox
 
         def get_init_data(self):
             CLIENT.send("get_init_data".encode())
@@ -127,6 +129,7 @@ class UserPage(QDialog):
                 pass
 
         get_init_data(self)
+
 
 
 
