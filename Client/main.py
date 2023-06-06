@@ -51,9 +51,7 @@ class LoginPage(QDialog):
             response = CLIENT.recv(1024).decode()
 
             # Response based functionality.
-            # If somehow intercepted and bypassed by reverse engineering, the user access control will prevent user data leaks.
             if response == "True": # If the server has the requested user in the specific table.
-                
                 self.open_user_page() # Open the main application window.
 
             else: # If the server does not have the requested data.
@@ -82,7 +80,7 @@ class LoginPage(QDialog):
 
 ########################################################################################################################
 
-# The signup class - currently not unimplented for actual signup.
+# The signup class - currently unimplented for actual signup.
 class SignUpPage(QDialog): 
     def __init__(self):
         super(SignUpPage,self).__init__()
@@ -115,17 +113,37 @@ class UserPage(QDialog):
         self.result_select_combobox
         self.loaded_table_edit
 
+        def packet_reciever():
+            data = b""
+            while True:
+                packet = CLIENT.recv(4096)
+                if not packet: break
+                data += packet
+
+                processed_data = pickle.loads(data)
+
+                return(processed_data)
+
         def get_init_data():
             CLIENT.send("get_init_data".encode())
-            user_table_names = pickle.loads(CLIENT.recv(1024))
-            init_table_columns = pickle.loads(CLIENT.recv(1024))
-            init_table_data = pickle.loads(CLIENT.recv(1024))
+
+            user_table_names = packet_reciever()
+            init_table_columns = packet_reciever()
+            init_table_data = packet_reciever()
 
             if user_table_names != []:
                 print(user_table_names)
-                print(init_table_columns)
-                print(init_table_data)
                 self.table_select_combobox.addItems(user_table_names)
+                print(init_table_columns)
+
+
+                df = pd.DataFrame(init_table_data)
+                print(df)
+                
+                
+
+
+
             else:
                 print("No Acessable Tables Found")
                 pass
@@ -136,6 +154,7 @@ class UserPage(QDialog):
 
 ########################################################################################################################
 
+
 # Pre application requirements
 load_dotenv() # Load the environment variables.
 CLIENT.connect((getenv("pub_Ip"), int(getenv("pub_port")))) # Connect to the client
@@ -144,7 +163,7 @@ CLIENT.connect((getenv("pub_Ip"), int(getenv("pub_port")))) # Connect to the cli
 app=QApplication(sys.argv)
 widget=QtWidgets.QStackedWidget()
 login_window = LoginPage() # Define the existance of the login application.
-signup_window = SignUpPage()
+signup_window = SignUpPage() # Define the existance of the signup application.
 widget.addWidget(login_window)
 widget.resize(1080,720)
 widget.setMaximumWidth(1920)

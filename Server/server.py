@@ -60,7 +60,7 @@ def server_controller(server):
 def init_data_response(server, cursor, user_table_access):
     
     if server.recv(1024).decode() == "get_init_data":
-        
+
         # Get all tables.
         cursor.execute(f'''SHOW TABLES''')
         database_table_names_curse = cursor.fetchall()
@@ -73,7 +73,6 @@ def init_data_response(server, cursor, user_table_access):
 
         elif type(user_table_access) == type(''): # If not, determine if their access tables actually tables exists.
             apparent_table_names = user_table_access.split(', ') # Split on predefined delimeter / Needs controller later.
-            print(apparent_table_names)
             user_table_names = []
             for table_name in apparent_table_names: # Parse all actual table names
                 if table_name in database_table_names:
@@ -81,21 +80,25 @@ def init_data_response(server, cursor, user_table_access):
 
         
         try:
-            cursor.execute(f'''SHOW COLUMNS FROM {user_table_names[0]}''')
-            df_columns = str(cursor.fetchall())
+            cursor.execute(f'''SHOW COLUMNS FROM {os.getenv("db_table_name")}''')
+            df_column_attributes = cursor.fetchall()
+            column_names = []
+            for column in df_column_attributes:
+                column_names.append(column[0])
+            print(column_names)
             
-            cursor.execute(f'''SELECT * FROM {user_table_names[0]}''')
-            df = pd.DataFrame(cursor.fetchall()).astype(str)
+            cursor.execute(f'''SELECT * FROM {os.getenv("db_table_name")} LIMIT 100''')
+            df = pd.DataFrame(cursor.fetchall(), columns=column_names)
         except:
             user_table_names = []
-            df_columns = []
-            df = pd.DataFrame().astype(str)
+            df_column_attributes = []
+            df = pd.DataFrame()
 
     #ENCRYPT DATA HERE
 
     #Wait for response after main window loads and send the init data.
         server.send(pickle.dumps(user_table_names)) # Send their access list to the Ui for user selection.
-        server.send(pickle.dumps(df_columns)) # Send their access list to the Ui for user selection.
+        server.send(pickle.dumps(df_column_attributes)) # Send their access list to the Ui for user selection.
         server.send(pickle.dumps(df))
 
 def main_data_controller():
