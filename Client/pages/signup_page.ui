@@ -49,7 +49,7 @@ background-position: center;
      <property name="minimumSize">
       <size>
        <width>360</width>
-       <height>445</height>
+       <height>401</height>
       </size>
      </property>
      <property name="styleSheet">
@@ -135,7 +135,7 @@ border-radius:60px;
       <property name="geometry">
        <rect>
         <x>230</x>
-        <y>380</y>
+        <y>340</y>
         <width>101</width>
         <height>41</height>
        </rect>
@@ -154,7 +154,7 @@ border-radius:60px;
       <property name="geometry">
        <rect>
         <x>20</x>
-        <y>150</y>
+        <y>120</y>
         <width>321</width>
         <height>41</height>
        </rect>
@@ -176,7 +176,7 @@ border-radius:60px;
       <property name="geometry">
        <rect>
         <x>20</x>
-        <y>270</y>
+        <y>230</y>
         <width>321</width>
         <height>41</height>
        </rect>
@@ -198,7 +198,7 @@ border-radius:60px;
       <property name="geometry">
        <rect>
         <x>20</x>
-        <y>320</y>
+        <y>280</y>
         <width>321</width>
         <height>41</height>
        </rect>
@@ -220,7 +220,7 @@ border-radius:60px;
       <property name="geometry">
        <rect>
         <x>20</x>
-        <y>200</y>
+        <y>170</y>
         <width>321</width>
         <height>41</height>
        </rect>
@@ -253,7 +253,7 @@ border-radius:60px;
       <property name="font">
        <font>
         <family>Trebuchet MS</family>
-        <pointsize>-1</pointsize>
+        <pointsize>1</pointsize>
        </font>
       </property>
       <property name="cursor">
@@ -278,7 +278,7 @@ font-size: 55px;
       <property name="geometry">
        <rect>
         <x>30</x>
-        <y>380</y>
+        <y>340</y>
         <width>101</width>
         <height>41</height>
        </rect>

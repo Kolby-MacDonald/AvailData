@@ -40,9 +40,9 @@ class LoginPage(QDialog):
         # Send the data to the server and wait for a response.
         if username != "" and password !="":
 
-            #ENCRYPT DATA HERE
+            # ENCRYPT DATA HERE
 
-            #Encode and send the data
+            # Encode and send the data
             CLIENT.send(username.encode())
             CLIENT.send(enc_password.encode())
 
@@ -52,13 +52,8 @@ class LoginPage(QDialog):
             # Response based functionality.
             # If somehow intercepted and bypassed by reverse engineering, the user access control will prevent user data leaks.
             if response == "True": # If the server has the requested user in the specific table.
-
+                
                 self.open_user_page() # Open the main application window.
-                user_table_names = CLIENT.recv(1024).decode() #
-                print(user_table_names)
-                data_test = CLIENT.recv(1024).decode()
-                print(data_test)
-
 
             else: # If the server does not have the requested data.
                 CLIENT.shutdown(socket.SHUT_RDWR) # Restart the socket.
@@ -110,10 +105,30 @@ class SignUpPage(QDialog):
 # The main application window where users will interact with their priveledge data.
 class UserPage(QDialog):
 
+    
     # Initialize the attributes of the userpage parent class.
     def __init__(self):
         super(UserPage, self).__init__()
         loadUi(r'Client\pages\user_page_test.ui', self) # Load the corresponding ui.
+
+        def get_init_data(self):
+            CLIENT.send("get_init_data".encode())
+            user_table_names = CLIENT.recv(1024).decode()
+            init_table_columns = CLIENT.recv(1024).decode()
+            init_table_data = CLIENT.recv(1024).decode()
+
+            if user_table_names != 'None':
+                user_tables_names = user_table_names.split(',')
+                print(user_tables_names)
+                print(init_table_columns)
+                print(init_table_data)
+            else:
+                print("No Acessable Tables Found")
+                pass
+
+        get_init_data(self)
+
+
 
 
 ########################################################################################################################

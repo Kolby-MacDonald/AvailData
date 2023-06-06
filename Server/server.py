@@ -48,6 +48,7 @@ def server_controller(server):
         server.send("True".encode())
         print(f"{user_name} has accessed the database.") # Log the access (debugging purposes).
         init_data_response(server, cursor, user_table_access) # Initialize data for main page start-up.
+        main_data_controller()
     
     else: # If those results don't exist, then tell the client it failed.
         server.send("False".encode())
@@ -66,28 +67,45 @@ def init_data_response(server, cursor, user_table_access):
         user_table_names = ''
         for i, tup in enumerate(database_table_names): # Append all tables to their access list.
             user_table_names += tup[0] + ','
-    else:
-        try: #If the user has tables in their access list.
-            apparent_table_names = user_table_access.split(', ') # Split on predefined delimeter / Needs controller later.
-            user_table_names = ''
-            for i, tup in enumerate(database_table_names): 
-                if tup[0] in apparent_table_names: # Only add tables that actually exist to their access list
-                    user_table_names += tup[0] + ',' # This prevents errors when trying to access deleted or renamed tables.
-        except:
-            user_table_names = '' # If none of their tables exist, give them a blank access list.
 
-    if user_table_names != '': # If they have tables in their access list
+    elif type(user_table_access) == type(''):
+        apparent_table_names = user_table_access.split(', ') # Split on predefined delimeter / Needs controller later.
+        user_table_names = ''
+        for i, tup in enumerate(database_table_names): 
+            if tup[0] in apparent_table_names: # Only add tables that actually exist to their access list
+                user_table_names += tup[0] + ',' # This prevents errors when trying to access deleted or renamed tables.
+
+
+    if type(user_table_access) == type(''): # If they have valid tables in their access list
         user_table_names = user_table_names[:-1] # Format the access list string.
+        first_table = user_table_names.split(',')[0]
+        cursor.execute(f'''SELECT * FROM {first_table}''')
+        df = pd.DataFrame(cursor.fetchall()).astype(str)
+        
+        cursor.execute(f'''SHOW COLUMNS FROM {first_table}''')
+        df_columns = str(cursor.fetchall())
+        print(df)
+        print(df_columns)
 
-        cursor.execute(f'''SELECT * FROM {os.getenv("db_table_name")}''') # TEMPORARY PoC : Sending entire table over TCP as string for testing.
-        df = pd.DataFrame(cursor.fetchall()) # TEMPORARY PoC : Sending entire table over TCP as string for testing.
-        df = df.astype(str) # TEMPORARY PoC : Sending entire table over TCP as string for testing.
-        print(df) # TEMPORARY PoC : Sending entire table over TCP as string for testing.
+    else:
+        user_table_names = 'None'
+        df_columns = 'None'
+        df = pd.DataFrame()
+        df = pd.DataFrame().astype(str)
+        print(df)
 
-        #ENCRYPT DATA HERE
-
+    #ENCRYPT DATA HERE
+    #Wait for response:
+    if server.recv(1024).decode() == "get_init_data":
         server.send(f"{user_table_names}".encode()) # Send their access list to the Ui for user selection.
+        server.send(f"{df_columns}".encode()) # Send their access list to the Ui for user selection.
         server.send(f"{df}".encode()) # TEMPORARY PoC : Sending entire table over TCP as string for testing.
+
+def main_data_controller():
+    while True:
+        
+        pass
+    pass
   
 
 def main():
