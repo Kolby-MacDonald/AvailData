@@ -1,5 +1,6 @@
 import sys
 import socket
+import pickle
 import hashlib
 import webbrowser
 import pandas as pd
@@ -110,27 +111,26 @@ class UserPage(QDialog):
     def __init__(self):
         super(UserPage, self).__init__()
         loadUi(r'Client\pages\user_page_test.ui', self) # Load the corresponding ui.
-        #table_select_combobox
-        #result_select_combobox
+        self.table_select_combobox
+        self.result_select_combobox
+        self.loaded_table_edit
 
-        def get_init_data(self):
+        def get_init_data():
             CLIENT.send("get_init_data".encode())
-            user_table_names = CLIENT.recv(1024).decode()
-            init_table_columns = CLIENT.recv(1024).decode()
-            init_table_data = CLIENT.recv(1024).decode()
+            user_table_names = pickle.loads(CLIENT.recv(1024))
+            init_table_columns = pickle.loads(CLIENT.recv(1024))
+            init_table_data = pickle.loads(CLIENT.recv(1024))
 
-            if user_table_names != 'None':
-                user_tables_names = user_table_names.split(',')
-                print(user_tables_names)
+            if user_table_names != []:
+                print(user_table_names)
                 print(init_table_columns)
                 print(init_table_data)
+                self.table_select_combobox.addItems(user_table_names)
             else:
                 print("No Acessable Tables Found")
                 pass
 
-        get_init_data(self)
-
-
+        get_init_data()
 
 
 

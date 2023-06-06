@@ -1,5 +1,6 @@
 import os
 import socket
+import pickle
 import threading
 import pandas as pd
 import mysql.connector
@@ -48,7 +49,7 @@ def server_controller(server):
         server.send("True".encode())
         print(f"{user_name} has accessed the database.") # Log the access (debugging purposes).
         init_data_response(server, cursor, user_table_access) # Initialize data for main page start-up.
-        main_data_controller()
+        # main_data_controller()
     
     else: # If those results don't exist, then tell the client it failed.
         server.send("False".encode())
@@ -58,48 +59,44 @@ def server_controller(server):
 # Initialize for main page start-up
 def init_data_response(server, cursor, user_table_access):
     
-    # Get all tables.
-    cursor.execute(f'''SHOW TABLES''')
-    database_table_names = cursor.fetchall()
-
-    # If the user has access to all tables.
-    if user_table_access == "all":
-        user_table_names = ''
-        for i, tup in enumerate(database_table_names): # Append all tables to their access list.
-            user_table_names += tup[0] + ','
-
-    elif type(user_table_access) == type(''):
-        apparent_table_names = user_table_access.split(', ') # Split on predefined delimeter / Needs controller later.
-        user_table_names = ''
-        for i, tup in enumerate(database_table_names): 
-            if tup[0] in apparent_table_names: # Only add tables that actually exist to their access list
-                user_table_names += tup[0] + ',' # This prevents errors when trying to access deleted or renamed tables.
-
-
-    if type(user_table_access) == type(''): # If they have valid tables in their access list
-        user_table_names = user_table_names[:-1] # Format the access list string.
-        first_table = user_table_names.split(',')[0]
-        cursor.execute(f'''SELECT * FROM {first_table}''')
-        df = pd.DataFrame(cursor.fetchall()).astype(str)
+    if server.recv(1024).decode() == "get_init_data":
         
-        cursor.execute(f'''SHOW COLUMNS FROM {first_table}''')
-        df_columns = str(cursor.fetchall())
-        print(df)
-        print(df_columns)
+        # Get all tables.
+        cursor.execute(f'''SHOW TABLES''')
+        database_table_names_curse = cursor.fetchall()
+        database_table_names = []
+        for i, tup in enumerate(database_table_names_curse):
+                database_table_names.append(tup[0])
 
-    else:
-        user_table_names = 'None'
-        df_columns = 'None'
-        df = pd.DataFrame()
-        df = pd.DataFrame().astype(str)
-        print(df)
+        if user_table_access == "all": # If the user has access to all tables - give them all table names.
+            user_table_names = database_table_names
+
+        elif type(user_table_access) == type(''): # If not, determine if their access tables actually tables exists.
+            apparent_table_names = user_table_access.split(', ') # Split on predefined delimeter / Needs controller later.
+            print(apparent_table_names)
+            user_table_names = []
+            for table_name in apparent_table_names: # Parse all actual table names
+                if table_name in database_table_names:
+                    user_table_names.append(table_name)
+
+        
+        try:
+            cursor.execute(f'''SHOW COLUMNS FROM {user_table_names[0]}''')
+            df_columns = str(cursor.fetchall())
+            
+            cursor.execute(f'''SELECT * FROM {user_table_names[0]}''')
+            df = pd.DataFrame(cursor.fetchall()).astype(str)
+        except:
+            user_table_names = []
+            df_columns = []
+            df = pd.DataFrame().astype(str)
 
     #ENCRYPT DATA HERE
-    #Wait for response:
-    if server.recv(1024).decode() == "get_init_data":
-        server.send(f"{user_table_names}".encode()) # Send their access list to the Ui for user selection.
-        server.send(f"{df_columns}".encode()) # Send their access list to the Ui for user selection.
-        server.send(f"{df}".encode()) # TEMPORARY PoC : Sending entire table over TCP as string for testing.
+
+    #Wait for response after main window loads and send the init data.
+        server.send(pickle.dumps(user_table_names)) # Send their access list to the Ui for user selection.
+        server.send(pickle.dumps(df_columns)) # Send their access list to the Ui for user selection.
+        server.send(pickle.dumps(df))
 
 def main_data_controller():
     while True:
