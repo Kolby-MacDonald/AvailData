@@ -65,6 +65,7 @@ def init_data_response(server, cursor, user_table_access):
         cursor.execute(f'''SHOW TABLES''')
         database_table_names_curse = cursor.fetchall()
         database_table_names = []
+        user_table_names = ''
         for i, tup in enumerate(database_table_names_curse):
                 database_table_names.append(tup[0])
 
@@ -79,17 +80,20 @@ def init_data_response(server, cursor, user_table_access):
                     user_table_names.append(table_name)
 
         
-        try:
-            cursor.execute(f'''SHOW COLUMNS FROM {os.getenv("db_table_name")}''')
+
+
+        if user_table_names != '' and len(user_table_names) >= 1:
+            cursor.execute(f'''SHOW COLUMNS FROM {user_table_names[0]}''')
             df_column_attributes = cursor.fetchall()
             column_names = []
             for column in df_column_attributes:
                 column_names.append(column[0])
             print(column_names)
             
-            cursor.execute(f'''SELECT * FROM {os.getenv("db_table_name")} LIMIT 100''')
+            cursor.execute(f'''SELECT * FROM {user_table_names[0]} LIMIT 100''')
             df = pd.DataFrame(cursor.fetchall(), columns=column_names)
-        except:
+
+        else:
             user_table_names = []
             df_column_attributes = []
             df = pd.DataFrame()
