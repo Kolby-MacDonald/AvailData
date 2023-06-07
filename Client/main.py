@@ -104,7 +104,6 @@ class SignUpPage(QDialog):
 # The main application window where users will interact with their priveledge data.
 class UserPage(QDialog):
 
-    
     # Initialize the attributes of the userpage parent class.
     def __init__(self):
         super(UserPage, self).__init__()
@@ -113,35 +112,33 @@ class UserPage(QDialog):
         self.result_select_combobox
         self.loaded_table_edit
 
-        def packet_reciever():
-            data = b""
-            while True:
-                packet = CLIENT.recv(4096)
-                if not packet: break
-                data += packet
-
-                processed_data = pickle.loads(data)
-
-                return(processed_data)
-
         def get_init_data():
             CLIENT.send("get_init_data".encode())
 
-            user_table_names = packet_reciever()
-            #init_columns_attributes = packet_reciever() - Potential for user editing control later?
-            init_table_data = packet_reciever()
+            user_table_names = pickle.loads(CLIENT.recv(4096))
+            init_table_data = pickle.loads(CLIENT.recv(4096))
 
             if user_table_names != []:
                 print(user_table_names)
                 self.table_select_combobox.addItems(user_table_names)
 
-
                 df = pd.DataFrame(init_table_data)
                 print(df)
 
-                self.loaded_table_edit.setColumnCount(len(df.columns))
-                self.loaded_table_edit.setHorizontalHeaderLabels(list(df.columns.values))
+                column_titles = list(df.columns.values)
 
+                self.loaded_table_edit.setColumnCount(len(df.columns))
+                self.loaded_table_edit.setRowCount(len(df.index))
+                self.loaded_table_edit.setHorizontalHeaderLabels(column_titles)
+
+                list_test = df["username"].tolist()
+                print(list_test)
+
+                for column, title in enumerate(column_titles):
+
+                    for row, item in enumerate(df[title]):
+
+                        self.loaded_table_edit.setItem(row, column, QtWidgets.QTableWidgetItem(str(item)))
 
             else:
                 print("No Acessable Tables Found")

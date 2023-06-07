@@ -95,7 +95,6 @@ def init_data_response(server, cursor, user_table_access):
 
     #Wait for response after main window loads and send the init data.
         server.send(pickle.dumps(user_table_names))
-        #server.send(pickle.dumps(df_column_attributes))
         server.send(pickle.dumps(df))
 
 def main_data_controller():
