@@ -64,8 +64,12 @@ def init_data_response(server, cursor, user_table_access):
         # Get all tables.
         cursor.execute(f'''SHOW TABLES''')
         database_table_names_curse = cursor.fetchall()
-        database_table_names = []
-        user_table_names = ''
+        database_table_names = [] # Names of all tables in database
+        user_table_names = [] # Names of tables the user has access to
+        df_column_attributes = [] # Attributes of the table columns the user has access to
+        column_names = [] # Column names to append to dataframe
+        df = pd.DataFrame() # Empty dataframe to send if one not found.
+
         for i, tup in enumerate(database_table_names_curse):
                 database_table_names.append(tup[0])
 
@@ -74,29 +78,18 @@ def init_data_response(server, cursor, user_table_access):
 
         elif type(user_table_access) == type(''): # If not, determine if their access tables actually tables exists.
             apparent_table_names = user_table_access.split(', ') # Split on predefined delimeter / Needs controller later.
-            user_table_names = []
             for table_name in apparent_table_names: # Parse all actual table names
-                if table_name in database_table_names:
+                if table_name in database_table_names and table_name not in user_table_names:
                     user_table_names.append(table_name)
 
-        
-
-
-        if user_table_names != '' and len(user_table_names) >= 1:
-            cursor.execute(f'''SHOW COLUMNS FROM {user_table_names[0]}''')
+        if len(user_table_names) >= 1:
+            cursor.execute(f'''SHOW COLUMNS FROM {os.getenv("db_table_name")}''')
             df_column_attributes = cursor.fetchall()
-            column_names = []
             for column in df_column_attributes:
                 column_names.append(column[0])
-            print(column_names)
             
-            cursor.execute(f'''SELECT * FROM {user_table_names[0]} LIMIT 100''')
+            cursor.execute(f'''SELECT * FROM {os.getenv("db_table_name")} LIMIT 100''')
             df = pd.DataFrame(cursor.fetchall(), columns=column_names)
-
-        else:
-            user_table_names = []
-            df_column_attributes = []
-            df = pd.DataFrame()
 
     #ENCRYPT DATA HERE
 

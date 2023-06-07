@@ -150,10 +150,7 @@ class UserPage(QDialog):
 
         get_init_data()
 
-
-
 ########################################################################################################################
-
 
 # Pre application requirements
 load_dotenv() # Load the environment variables.
