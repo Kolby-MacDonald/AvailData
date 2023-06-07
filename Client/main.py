@@ -128,20 +128,19 @@ class UserPage(QDialog):
             CLIENT.send("get_init_data".encode())
 
             user_table_names = packet_reciever()
-            init_table_columns = packet_reciever()
+            #init_columns_attributes = packet_reciever() - Potential for user editing control later?
             init_table_data = packet_reciever()
 
             if user_table_names != []:
                 print(user_table_names)
                 self.table_select_combobox.addItems(user_table_names)
-                print(init_table_columns)
 
 
                 df = pd.DataFrame(init_table_data)
                 print(df)
-                
-                
 
+                self.loaded_table_edit.setColumnCount(len(df.columns))
+                self.loaded_table_edit.setHorizontalHeaderLabels(list(df.columns.values))
 
 
             else:

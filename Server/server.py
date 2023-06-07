@@ -61,9 +61,9 @@ def init_data_response(server, cursor, user_table_access):
     
     if server.recv(1024).decode() == "get_init_data":
 
-        # Get all tables.
         cursor.execute(f'''SHOW TABLES''')
         database_table_names_curse = cursor.fetchall()
+
         database_table_names = [] # Names of all tables in database
         user_table_names = [] # Names of tables the user has access to
         df_column_attributes = [] # Attributes of the table columns the user has access to
@@ -73,12 +73,12 @@ def init_data_response(server, cursor, user_table_access):
         for i, tup in enumerate(database_table_names_curse):
                 database_table_names.append(tup[0])
 
-        if user_table_access == "all": # If the user has access to all tables - give them all table names.
+        if user_table_access == "all":
             user_table_names = database_table_names
 
-        elif type(user_table_access) == type(''): # If not, determine if their access tables actually tables exists.
-            apparent_table_names = user_table_access.split(', ') # Split on predefined delimeter / Needs controller later.
-            for table_name in apparent_table_names: # Parse all actual table names
+        elif type(user_table_access) == type(''):
+            apparent_table_names = user_table_access.split(', ')
+            for table_name in apparent_table_names:
                 if table_name in database_table_names and table_name not in user_table_names:
                     user_table_names.append(table_name)
 
@@ -94,8 +94,8 @@ def init_data_response(server, cursor, user_table_access):
     #ENCRYPT DATA HERE
 
     #Wait for response after main window loads and send the init data.
-        server.send(pickle.dumps(user_table_names)) # Send their access list to the Ui for user selection.
-        server.send(pickle.dumps(df_column_attributes)) # Send their access list to the Ui for user selection.
+        server.send(pickle.dumps(user_table_names))
+        #server.send(pickle.dumps(df_column_attributes))
         server.send(pickle.dumps(df))
 
 def main_data_controller():
