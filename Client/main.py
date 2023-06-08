@@ -9,6 +9,7 @@ from PyQt5 import QtWidgets
 from PyQt5.uic import loadUi
 from dotenv import load_dotenv
 from PyQt5.QtWidgets import QDialog, QApplication
+import time
 
 # Define our client.
 CLIENT = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -140,14 +141,22 @@ class UserPage(QDialog):
                 pass
 
         def main_controller():
-            # pythonprogramming.net fixed headersize buffering
-            header_size = 50
-            msg = "Here is the message the server needs to wait for"
-            full_msg = f"{len(msg):<{header_size}}"+msg
+            HEADERSIZE = 10
 
-            print(full_msg)
+            msg = "Hey Server, this will tell you to do something shortly!"
+            msg = f"{len(msg):<{HEADERSIZE}}"+msg
 
             CLIENT.send(bytes(msg,"utf-8"))
+
+            
+            #time.sleep(1)
+            msg = f"For now it just sends you a message"
+            msg = f"{len(msg):<{HEADERSIZE}}"+msg
+
+            print(msg)
+
+            CLIENT.send(bytes(msg,"utf-8"))
+           
 
         get_init_data()
         main_controller()

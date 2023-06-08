@@ -98,28 +98,31 @@ def init_data_response(server, cursor, user_table_access):
         server.send(pickle.dumps(df))
 
 def main_data_controller(server):
-    header_size = 50
-    constructed_msg = ''
-    incoming_packet = True
-
+    # The buffer controller runs on this code: https://pythonprogramming.net/buffering-streaming-data-sockets-tutorial-python-3/
+    
+    HEADERSIZE = 10
     while True:
-        msg = server.recv(1024)
-        if incoming_packet:
-            buffer_size = int(len(msg[:header_size]))
-            incoming_packet = False
+        full_msg = ''
+        new_msg = True
+        while True:
+            msg = server.recv(16)
+            if new_msg:
+                print("new msg len:",msg[:HEADERSIZE])
+                msglen = int(msg[:HEADERSIZE])
+                new_msg = False
 
-        constructed_msg += msg.decode("utf-8")
+            print(f"full message length: {msglen}")
 
-        if len(constructed_msg) == buffer_size:
-            print("full msg recvd")
-            print(constructed_msg[header_size:])
-            incoming_packet = True
-            # SERVICES GO HERE
-            print(constructed_msg)
-            constructed_msg = ''
-            # Reset the full_msg
-            break # Will need to remove this
+            full_msg += msg.decode("utf-8")
 
+            print(len(full_msg))
+
+
+            if len(full_msg)-HEADERSIZE == msglen:
+                print("full msg recvd")
+                print(full_msg[HEADERSIZE:])
+                new_msg = True
+                full_msg = ""
   
 
 def main():
