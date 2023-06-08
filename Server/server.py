@@ -49,7 +49,7 @@ def server_controller(server):
         server.send("True".encode())
         print(f"{user_name} has accessed the database.") # Log the access (debugging purposes).
         init_data_response(server, cursor, user_table_access) # Initialize data for main page start-up.
-        # main_data_controller()
+        main_data_controller(server)
     
     else: # If those results don't exist, then tell the client it failed.
         server.send("False".encode())
@@ -97,11 +97,29 @@ def init_data_response(server, cursor, user_table_access):
         server.send(pickle.dumps(user_table_names))
         server.send(pickle.dumps(df))
 
-def main_data_controller():
+def main_data_controller(server):
+    header_size = 50
+    constructed_msg = ''
+    incoming_packet = True
+
     while True:
-        
-        pass
-    pass
+        msg = server.recv(1024)
+        if incoming_packet:
+            buffer_size = int(len(msg[:header_size]))
+            incoming_packet = False
+
+        constructed_msg += msg.decode("utf-8")
+
+        if len(constructed_msg) == buffer_size:
+            print("full msg recvd")
+            print(constructed_msg[header_size:])
+            incoming_packet = True
+            # SERVICES GO HERE
+            print(constructed_msg)
+            constructed_msg = ''
+            # Reset the full_msg
+            break # Will need to remove this
+
   
 
 def main():

@@ -123,34 +123,41 @@ class UserPage(QDialog):
                 self.table_select_combobox.addItems(user_table_names)
 
                 df = pd.DataFrame(init_table_data)
-                print(df)
-
                 column_titles = list(df.columns.values)
 
                 self.loaded_table_edit.setColumnCount(len(df.columns))
                 self.loaded_table_edit.setRowCount(len(df.index))
                 self.loaded_table_edit.setHorizontalHeaderLabels(column_titles)
 
-                list_test = df["username"].tolist()
-                print(list_test)
-
                 for column, title in enumerate(column_titles):
-
                     for row, item in enumerate(df[title]):
-
-                        self.loaded_table_edit.setItem(row, column, QtWidgets.QTableWidgetItem(str(item)))
-
+                        item = str(item)
+                        if item == 'None':
+                            item = ''
+                        self.loaded_table_edit.setItem(row, column, QtWidgets.QTableWidgetItem(item))
             else:
                 print("No Acessable Tables Found")
                 pass
 
+        def main_controller():
+            # pythonprogramming.net fixed headersize buffering
+            header_size = 50
+            msg = "Here is the message the server needs to wait for"
+            full_msg = f"{len(msg):<{header_size}}"+msg
+
+            print(full_msg)
+
+            CLIENT.send(bytes(msg,"utf-8"))
+
         get_init_data()
+        main_controller()
 
 ########################################################################################################################
 
 # Pre application requirements
 load_dotenv() # Load the environment variables.
 CLIENT.connect((getenv("pub_Ip"), int(getenv("pub_port")))) # Connect to the client
+#CLIENT.setblocking(False)
 
 # Application startup requirements and control.
 app=QApplication(sys.argv)
