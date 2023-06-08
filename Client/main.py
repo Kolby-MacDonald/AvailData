@@ -1,6 +1,6 @@
 import sys
+import json
 import socket
-import pickle
 import hashlib
 import webbrowser
 import pandas as pd
@@ -9,7 +9,6 @@ from PyQt5 import QtWidgets
 from PyQt5.uic import loadUi
 from dotenv import load_dotenv
 from PyQt5.QtWidgets import QDialog, QApplication
-import time
 
 # Define our client.
 CLIENT = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -116,15 +115,21 @@ class UserPage(QDialog):
         def get_init_data():
             CLIENT.send("get_init_data".encode())
 
-            user_table_names = pickle.loads(CLIENT.recv(4096))
-            init_table_data = pickle.loads(CLIENT.recv(4096))
+            user_table_names = json.loads(CLIENT.recv(4096).decode("utf-8"))
+
+            init_table_data = json.loads(CLIENT.recv(4096).decode("utf-8"))
+
+            print(user_table_names)
+            print(init_table_data)
 
             if user_table_names != []:
-                print(user_table_names)
                 self.table_select_combobox.addItems(user_table_names)
 
-                df = pd.DataFrame(init_table_data)
+                df = pd.DataFrame.from_dict(init_table_data)
+                print(df)
                 column_titles = list(df.columns.values)
+                column_titles = [str(title) for title in column_titles]
+                print(column_titles)
 
                 self.loaded_table_edit.setColumnCount(len(df.columns))
                 self.loaded_table_edit.setRowCount(len(df.index))
@@ -140,26 +145,33 @@ class UserPage(QDialog):
                 print("No Acessable Tables Found")
                 pass
 
-        def main_controller():
-            HEADERSIZE = 10
+        # def main_controller():
+        #     HEADERSIZE = 15
 
-            msg = "Hey Server, this will tell you to do something shortly!"
-            msg = f"{len(msg):<{HEADERSIZE}}"+msg
-
-            CLIENT.send(bytes(msg,"utf-8"))
-
+        #     # msg = "Hey Server, this will tell you to do something shortly!"
+        #     # msg = f"{len(msg):<{HEADERSIZE}}"+msg
+        #     # CLIENT.send(bytes(msg,"utf-8"))
             
-            #time.sleep(1)
-            msg = f"For now it just sends you a message"
-            msg = f"{len(msg):<{HEADERSIZE}}"+msg
+        #     # #time.sleep(1)
+        #     # msg = f"For now it just sends you a message"
+        #     # msg = f"{len(msg):<{HEADERSIZE}}" + msg
+        #     # print(msg)
 
-            print(msg)
-
-            CLIENT.send(bytes(msg,"utf-8"))
+        #     # CLIENT.send(bytes(msg,"utf-8"))
+        #     test_list = ["this_will_control_something", 10]
+        #     msg = pickle.dumps(test_list)
+        #     print(msg)
+        #     print(pickle.loads(msg))
+            
+        #     msg = f"{len(msg):<{HEADERSIZE}}".encode() + msg
+            
+        #     print(msg)
+        #     CLIENT.send(msg)
+            
            
 
         get_init_data()
-        main_controller()
+        #main_controller()
 
 ########################################################################################################################
 

@@ -137,11 +137,6 @@
      <string>5</string>
     </property>
    </item>
-   <item>
-    <property name="text">
-     <string>All</string>
-    </property>
-   </item>
   </widget>
   <widget class="QTableWidget" name="loaded_table_edit">
    <property name="geometry">

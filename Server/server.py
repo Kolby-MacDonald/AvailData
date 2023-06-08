@@ -1,6 +1,6 @@
 import os
+import json
 import socket
-import pickle
 import threading
 import pandas as pd
 import mysql.connector
@@ -90,39 +90,19 @@ def init_data_response(server, cursor, user_table_access):
             
             cursor.execute(f'''SELECT * FROM {os.getenv("db_table_name")} LIMIT 100''')
             df = pd.DataFrame(cursor.fetchall(), columns=column_names)
+            df = df.to_dict()
 
     #ENCRYPT DATA HERE
 
     #Wait for response after main window loads and send the init data.
-        server.send(pickle.dumps(user_table_names))
-        server.send(pickle.dumps(df))
+        server.send(json.dumps(user_table_names).encode("utf-8"))
+        server.send(json.dumps(df).encode("utf-8"))
 
 def main_data_controller(server):
-    # The buffer controller runs on this code: https://pythonprogramming.net/buffering-streaming-data-sockets-tutorial-python-3/
+    # https://pythonprogramming.net/buffering-streaming-data-sockets-tutorial-python-3/
+
+    HEADERSIZE = 15 #(999,999,999,999,999)
     
-    HEADERSIZE = 10
-    while True:
-        full_msg = ''
-        new_msg = True
-        while True:
-            msg = server.recv(16)
-            if new_msg:
-                print("new msg len:",msg[:HEADERSIZE])
-                msglen = int(msg[:HEADERSIZE])
-                new_msg = False
-
-            print(f"full message length: {msglen}")
-
-            full_msg += msg.decode("utf-8")
-
-            print(len(full_msg))
-
-
-            if len(full_msg)-HEADERSIZE == msglen:
-                print("full msg recvd")
-                print(full_msg[HEADERSIZE:])
-                new_msg = True
-                full_msg = ""
   
 
 def main():
@@ -134,7 +114,7 @@ def main():
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server_socket.bind((os.getenv("pub_Ip"), int(os.getenv("pub_port"))))
     server_socket.listen()
-    print("Server listening.") # Log the server start (debugging purposes).
+    print("Server listening...") # Log the server start (debugging purposes).
 
     # Accept incoming connection and create a thread to handle them.
     while True:
