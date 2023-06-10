@@ -29,7 +29,7 @@ class LoginPage(QDialog):
     def login_function(self):
 
         # Get required data.
-        global CLIENT # Get our global Client definition.                         
+        global CLIENT # Get our global Client definition.                     
         username = str(self.username_line_edit.text()) # Take the input username from the respective linedit.
         password = str(self.password_line_edit.text()) # Take the input password from the respective linedit.
         enc_password = hashlib.sha256(password.encode()).hexdigest() #SHA256 Hash the password before sending.
@@ -40,12 +40,14 @@ class LoginPage(QDialog):
 
         # Send the data to the server and wait for a response.
         if username != "" and password !="":
-
+            CLIENT.connect((getenv("pub_Ip"), int(getenv("pub_port")))) # Connect to the client
+            connected = CLIENT.recv(1024).decode()
             # ENCRYPT DATA HERE
-
+            
+            if connected == "Connected":
             # Encode and send the data
-            CLIENT.send(username.encode())
-            CLIENT.send(enc_password.encode())
+                CLIENT.sendall(username.encode())
+                CLIENT.sendall(enc_password.encode())
 
             # Wait for a response.
             response = CLIENT.recv(1024).decode()
@@ -108,77 +110,98 @@ class UserPage(QDialog):
     def __init__(self):
         super(UserPage, self).__init__()
         loadUi(r'Client\pages\user_page_test.ui', self) # Load the corresponding ui.
-        self.table_select_combobox
-        self.result_select_combobox
+        self.table_select_combobox.currentTextChanged.connect(self.update_table_view)
+        self.result_select_combobox.currentTextChanged.connect(self.update_table_view)
         self.loaded_table_edit
 
-        def get_init_data():
-            CLIENT.send("get_init_data".encode())
+        UserPage.request_handler(self, "get_init_data")      
 
-            user_table_names = json.loads(CLIENT.recv(4096).decode("utf-8"))
+        # Client side request handler must be external, data is called on a by necessity basic.
+    def send_data(self, data):
+        json_data = json.dumps(data) # Convert the data to JSON format
+        data_length = len(json_data) # Get the length of the JSON data
+        header = f"{data_length:<{15}}".encode('utf-8') # Create a fixed-length header indicating the data length
 
-            init_table_data = json.loads(CLIENT.recv(4096).decode("utf-8"))
+        CLIENT.sendall(header + json_data.encode('utf-8'))
 
-            print(user_table_names)
-            print(init_table_data)
+    def request_handler(self, request):
+        if request == "get_init_data":
+            data = [request]
+            UserPage.send_data(self, data)
+            UserPage.recieve_data(self, request)
 
-            if user_table_names != []:
-                self.table_select_combobox.addItems(user_table_names)
+        elif request == "update_loaded_table":
+            # Request Type, Table Name, Number of Results to Return
+            data = [request, self.table_select_combobox.currentText(), self.result_select_combobox.currentText()]
+            UserPage.send_data(self, data)
+            UserPage.recieve_data(self, request)
 
-                df = pd.DataFrame.from_dict(init_table_data)
-                print(df)
-                column_titles = list(df.columns.values)
-                column_titles = [str(title) for title in column_titles]
-                print(column_titles)
 
-                self.loaded_table_edit.setColumnCount(len(df.columns))
-                self.loaded_table_edit.setRowCount(len(df.index))
-                self.loaded_table_edit.setHorizontalHeaderLabels(column_titles)
+    def recieve_data(self, request):
+        try:
+            header = CLIENT.recv(15)
+            if not header:
+                return None
 
-                for column, title in enumerate(column_titles):
-                    for row, item in enumerate(df[title]):
-                        item = str(item)
-                        if item == 'None':
-                            item = ''
-                        self.loaded_table_edit.setItem(row, column, QtWidgets.QTableWidgetItem(item))
-            else:
-                print("No Acessable Tables Found")
-                pass
+            # Extract the data length from the header
+            data_length = int(header.strip())
 
-        # def main_controller():
-        #     HEADERSIZE = 15
+            # Receive the data using the extracted data length
+            data = CLIENT.recv(data_length).decode('utf-8')
 
-        #     # msg = "Hey Server, this will tell you to do something shortly!"
-        #     # msg = f"{len(msg):<{HEADERSIZE}}"+msg
-        #     # CLIENT.send(bytes(msg,"utf-8"))
+            # Parse the JSON data
+            json_data = json.loads(data)
+
+            #print(json_data)
             
-        #     # #time.sleep(1)
-        #     # msg = f"For now it just sends you a message"
-        #     # msg = f"{len(msg):<{HEADERSIZE}}" + msg
-        #     # print(msg)
+            if request == "get_init_data":
+                UserPage.get_init_data(self, json_data)
 
-        #     # CLIENT.send(bytes(msg,"utf-8"))
-        #     test_list = ["this_will_control_something", 10]
-        #     msg = pickle.dumps(test_list)
-        #     print(msg)
-        #     print(pickle.loads(msg))
-            
-        #     msg = f"{len(msg):<{HEADERSIZE}}".encode() + msg
-            
-        #     print(msg)
-        #     CLIENT.send(msg)
-            
-           
+            elif request == "update_table_view":
+                UserPage.update_table_view(self, json_data)
 
-        get_init_data()
-        #main_controller()
+        except:
+            pass
+
+    def get_init_data(self, init_data):
+        user_table_names = init_data[0]
+        init_table_data = init_data[1]
+
+        if user_table_names != []:
+            self.table_select_combobox.addItems(user_table_names)
+
+            df = pd.DataFrame.from_dict(init_table_data)
+            column_titles = list(df.columns.values)
+            column_titles = [str(title) for title in column_titles]
+
+            self.loaded_table_edit.setColumnCount(len(df.columns))
+            self.loaded_table_edit.setRowCount(len(df.index))
+            self.loaded_table_edit.setHorizontalHeaderLabels(column_titles)
+
+            for column, title in enumerate(column_titles):
+                for row, item in enumerate(df[title]):
+                    item = str(item)
+                    if item == 'None':
+                        item = ''
+                    self.loaded_table_edit.setItem(row, column, QtWidgets.QTableWidgetItem(item))
+        else:
+            print("No Acessable Tables Found")
+            pass
+
+    def update_table_view(self, update_data):
+        #request_handler("update_loaded_table")
+        print("Update table view requested")
+        if update_data != []:
+            
+            pass
+        pass
+
 
 ########################################################################################################################
 
 # Pre application requirements
 load_dotenv() # Load the environment variables.
-CLIENT.connect((getenv("pub_Ip"), int(getenv("pub_port")))) # Connect to the client
-#CLIENT.setblocking(False)
+
 
 # Application startup requirements and control.
 app=QApplication(sys.argv)

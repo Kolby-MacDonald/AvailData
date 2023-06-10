@@ -11,6 +11,7 @@ from dotenv import load_dotenv
 def server_controller(server): 
     
     # The very first recieved data will always be username and password.
+    server.sendall("Connected".encode())
     username = server.recv(1024)
     password = server.recv(1024)
 
@@ -46,63 +47,85 @@ def server_controller(server):
         pass
 
     if results:  # If those results exist, then log the user in.
-        server.send("True".encode())
+        server.sendall("True".encode())
         print(f"{user_name} has accessed the database.") # Log the access (debugging purposes).
-        init_data_response(server, cursor, user_table_access) # Initialize data for main page start-up.
-        main_data_controller(server)
+        recieve_data(server, cursor, user_table_access)
     
     else: # If those results don't exist, then tell the client it failed.
-        server.send("False".encode())
+        server.sendall("False".encode())
         print(f"{username.decode()} has failed to access the database.") # Log the failed attempt (debugging purposes).
 
+
+def send_data(server, data):
+    json_data = json.dumps(data)
+    data_length = len(json_data)
+    header = f"{data_length:<{15}}".encode('utf-8')
+    server.sendall(header + json_data.encode('utf-8'))
+    print("Data Sent")
+
+def recieve_data(server, cursor, user_table_access):
+        while True:
+            try:
+                header = server.recv(15)
+                if not header:
+                    break
+
+                data_length = int(header.strip())
+                data = server.recv(data_length).decode('utf-8')
+                json_data = json.loads(data)
+                request_type = json_data[0]
+    
+                if request_type == "get_init_data":
+                    init_data_response(server, cursor, user_table_access)
+                
+                elif request_type == "update_table_view":
+                    update_table_view(server, cursor, user_table_access)
+                    pass
+
+            except:
+                pass
     
 # Initialize for main page start-up
 def init_data_response(server, cursor, user_table_access):
-    
-    if server.recv(1024).decode() == "get_init_data":
 
-        cursor.execute(f'''SHOW TABLES''')
-        database_table_names_curse = cursor.fetchall()
+    cursor.execute(f'''SHOW TABLES''')
+    database_table_names_curse = cursor.fetchall()
 
-        database_table_names = [] # Names of all tables in database
-        user_table_names = [] # Names of tables the user has access to
-        df_column_attributes = [] # Attributes of the table columns the user has access to
-        column_names = [] # Column names to append to dataframe
-        df = pd.DataFrame() # Empty dataframe to send if one not found.
+    database_table_names = [] # Names of all tables in database
+    user_table_names = [] # Names of tables the user has access to
+    df_column_attributes = [] # Attributes of the table columns the user has access to
+    column_names = [] # Column names to append to dataframe
+    df = pd.DataFrame() # Empty dataframe to send if one not found.
 
-        for i, tup in enumerate(database_table_names_curse):
-                database_table_names.append(tup[0])
+    for i, tup in enumerate(database_table_names_curse):
+            database_table_names.append(tup[0])
 
-        if user_table_access == "all":
-            user_table_names = database_table_names
+    if user_table_access == "all":
+        user_table_names = database_table_names
 
-        elif type(user_table_access) == type(''):
-            apparent_table_names = user_table_access.split(', ')
-            for table_name in apparent_table_names:
-                if table_name in database_table_names and table_name not in user_table_names:
-                    user_table_names.append(table_name)
+    elif type(user_table_access) == type(''):
+        apparent_table_names = user_table_access.split(', ')
+        for table_name in apparent_table_names:
+            if table_name in database_table_names and table_name not in user_table_names:
+                user_table_names.append(table_name)
 
-        if len(user_table_names) >= 1:
-            cursor.execute(f'''SHOW COLUMNS FROM {os.getenv("db_table_name")}''')
-            df_column_attributes = cursor.fetchall()
-            for column in df_column_attributes:
-                column_names.append(column[0])
-            
-            cursor.execute(f'''SELECT * FROM {os.getenv("db_table_name")} LIMIT 100''')
-            df = pd.DataFrame(cursor.fetchall(), columns=column_names)
-            df = df.to_dict()
+    if len(user_table_names) >= 1:
+        cursor.execute(f'''SHOW COLUMNS FROM {os.getenv("db_table_name")}''')
+        df_column_attributes = cursor.fetchall()
+        for column in df_column_attributes:
+            column_names.append(column[0])
+        
+        cursor.execute(f'''SELECT * FROM {os.getenv("db_table_name")} LIMIT 100''')
+        df = pd.DataFrame(cursor.fetchall(), columns=column_names)
+        df = df.to_dict()
 
-    #ENCRYPT DATA HERE
+        #ENCRYPT DATA HERE
 
-    #Wait for response after main window loads and send the init data.
-        server.send(json.dumps(user_table_names).encode("utf-8"))
-        server.send(json.dumps(df).encode("utf-8"))
+        data = [user_table_names, df]
+        send_data(server, data)
 
-def main_data_controller(server):
-    # https://pythonprogramming.net/buffering-streaming-data-sockets-tutorial-python-3/
-
-    HEADERSIZE = 15 #(999,999,999,999,999)
-    
+def update_table_view():
+    print("update table view requested")
   
 
 def main():
