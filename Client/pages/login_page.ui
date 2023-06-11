@@ -30,7 +30,7 @@
   </property>
   <property name="styleSheet">
    <string notr="true">#Form{
-background-image: url(C:/Users/deadb/Documents/GitHub/AvailData/login_page/login_photos/login_background.jpg);
+background-image: url(C:/Users/deadb/Documents/GitHub/AvailData-Public/Client/login_photos/login_background.jpg);
 background-position: center;
 }</string>
   </property>
@@ -55,7 +55,7 @@ background-position: center;
      <property name="font">
       <font>
        <family>Trebuchet MS</family>
-       <pointsize>1</pointsize>
+       <pointsize>-1</pointsize>
       </font>
      </property>
      <property name="styleSheet">

@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1200</width>
-    <height>800</height>
+    <width>1140</width>
+    <height>840</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -18,136 +18,343 @@
   </property>
   <property name="minimumSize">
    <size>
-    <width>1200</width>
-    <height>800</height>
+    <width>1140</width>
+    <height>840</height>
    </size>
   </property>
   <property name="maximumSize">
    <size>
-    <width>1200</width>
-    <height>800</height>
+    <width>1920</width>
+    <height>1080</height>
    </size>
   </property>
   <property name="windowTitle">
    <string>Form</string>
   </property>
-  <widget class="QLabel" name="label">
-   <property name="geometry">
-    <rect>
-     <x>0</x>
-     <y>10</y>
-     <width>1201</width>
-     <height>41</height>
-    </rect>
-   </property>
-   <property name="font">
-    <font>
-     <pointsize>29</pointsize>
-    </font>
-   </property>
-   <property name="text">
-    <string>Temp User Parameters</string>
-   </property>
-   <property name="alignment">
-    <set>Qt::AlignCenter</set>
-   </property>
-  </widget>
-  <widget class="QLabel" name="label_2">
-   <property name="geometry">
-    <rect>
-     <x>960</x>
-     <y>50</y>
-     <width>141</width>
-     <height>51</height>
-    </rect>
-   </property>
-   <property name="font">
-    <font>
-     <pointsize>13</pointsize>
-    </font>
-   </property>
-   <property name="text">
-    <string>How Many Results:</string>
-   </property>
-  </widget>
-  <widget class="QLabel" name="label_3">
-   <property name="geometry">
-    <rect>
-     <x>20</x>
-     <y>60</y>
-     <width>121</width>
-     <height>51</height>
-    </rect>
-   </property>
-   <property name="font">
-    <font>
-     <pointsize>13</pointsize>
-    </font>
-   </property>
-   <property name="text">
-    <string>Table Selected:</string>
-   </property>
-  </widget>
-  <widget class="QComboBox" name="table_select_combobox">
-   <property name="geometry">
-    <rect>
-     <x>140</x>
-     <y>70</y>
-     <width>281</width>
-     <height>31</height>
-    </rect>
-   </property>
-  </widget>
-  <widget class="QComboBox" name="result_select_combobox">
-   <property name="geometry">
-    <rect>
-     <x>1110</x>
-     <y>60</y>
-     <width>71</width>
-     <height>31</height>
-    </rect>
-   </property>
-   <property name="font">
-    <font>
-     <pointsize>14</pointsize>
-    </font>
-   </property>
-   <item>
-    <property name="text">
-     <string>100</string>
-    </property>
+  <property name="styleSheet">
+   <string notr="true">#Form{
+background-image: url(C:/Users/deadb/Documents/GitHub/AvailData-Public/Client/login_photos/temp_main_background.jpg);
+background-position: center;
+}</string>
+  </property>
+  <layout class="QGridLayout" name="gridLayout">
+   <item row="0" column="0">
+    <widget class="QFrame" name="frame">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="minimumSize">
+      <size>
+       <width>943</width>
+       <height>616</height>
+      </size>
+     </property>
+     <property name="maximumSize">
+      <size>
+       <width>1100</width>
+       <height>800</height>
+      </size>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">*{
+background:rgba(0,0,0,0.8);
+background-color: rgb(49, 51, 56);
+font-family: Trebuchet MS;
+font-size:20px;
+color: white;
+}
+
+QFrame
+{
+background: transparent;
+}
+
+QLabel
+{
+background-color:rgba(0,0,0,0.5);
+border-radius: 15;
+color: rgb(0, 255, 0);
+}
+</string>
+     </property>
+     <property name="frameShape">
+      <enum>QFrame::StyledPanel</enum>
+     </property>
+     <property name="frameShadow">
+      <enum>QFrame::Raised</enum>
+     </property>
+     <widget class="QLabel" name="selected_table_label">
+      <property name="geometry">
+       <rect>
+        <x>20</x>
+        <y>20</y>
+        <width>381</width>
+        <height>61</height>
+       </rect>
+      </property>
+      <property name="font">
+       <font>
+        <family>Trebuchet MS</family>
+        <pointsize>-1</pointsize>
+       </font>
+      </property>
+      <property name="styleSheet">
+       <string notr="true">background-color: rgba(0,0,0,0.8);</string>
+      </property>
+      <property name="text">
+       <string>  Selected Table</string>
+      </property>
+     </widget>
+     <widget class="QComboBox" name="table_select_combobox">
+      <property name="geometry">
+       <rect>
+        <x>170</x>
+        <y>30</y>
+        <width>221</width>
+        <height>41</height>
+       </rect>
+      </property>
+      <property name="layoutDirection">
+       <enum>Qt::RightToLeft</enum>
+      </property>
+      <property name="styleSheet">
+       <string notr="true">border-radius: 10px;
+background-color: rgba(49, 51, 56,0.8);
+font-size: 15;</string>
+      </property>
+      <property name="editable">
+       <bool>false</bool>
+      </property>
+      <property name="currentText">
+       <string/>
+      </property>
+     </widget>
+     <widget class="QLabel" name="title_label">
+      <property name="geometry">
+       <rect>
+        <x>420</x>
+        <y>20</y>
+        <width>481</width>
+        <height>61</height>
+       </rect>
+      </property>
+      <property name="font">
+       <font>
+        <family>Trebuchet MS</family>
+        <pointsize>-1</pointsize>
+       </font>
+      </property>
+      <property name="styleSheet">
+       <string notr="true">font-size: 38px;
+color: red;
+background-color: rgba(0,0,0,0.8);</string>
+      </property>
+      <property name="text">
+       <string>Temporary Main Page</string>
+      </property>
+      <property name="alignment">
+       <set>Qt::AlignCenter</set>
+      </property>
+     </widget>
+     <widget class="QLabel" name="result_select_label">
+      <property name="geometry">
+       <rect>
+        <x>920</x>
+        <y>20</y>
+        <width>161</width>
+        <height>61</height>
+       </rect>
+      </property>
+      <property name="font">
+       <font>
+        <family>Trebuchet MS</family>
+        <pointsize>-1</pointsize>
+       </font>
+      </property>
+      <property name="styleSheet">
+       <string notr="true">background-color: rgba(0,0,0,0.8);</string>
+      </property>
+      <property name="text">
+       <string>Results  </string>
+      </property>
+      <property name="alignment">
+       <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+      </property>
+     </widget>
+     <widget class="QComboBox" name="result_select_combobox">
+      <property name="geometry">
+       <rect>
+        <x>930</x>
+        <y>30</y>
+        <width>71</width>
+        <height>41</height>
+       </rect>
+      </property>
+      <property name="font">
+       <font>
+        <family>Trebuchet MS</family>
+        <pointsize>-1</pointsize>
+       </font>
+      </property>
+      <property name="autoFillBackground">
+       <bool>false</bool>
+      </property>
+      <property name="styleSheet">
+       <string notr="true">border-radius: 10px;
+background-color: rgba(49, 51, 56,0.8);</string>
+      </property>
+      <property name="sizeAdjustPolicy">
+       <enum>QComboBox::AdjustToContentsOnFirstShow</enum>
+      </property>
+      <item>
+       <property name="text">
+        <string>100</string>
+       </property>
+      </item>
+      <item>
+       <property name="text">
+        <string>50</string>
+       </property>
+      </item>
+      <item>
+       <property name="text">
+        <string>25</string>
+       </property>
+      </item>
+      <item>
+       <property name="text">
+        <string>10</string>
+       </property>
+      </item>
+      <item>
+       <property name="text">
+        <string>5</string>
+       </property>
+      </item>
+     </widget>
+     <widget class="QFrame" name="frame_2">
+      <property name="geometry">
+       <rect>
+        <x>20</x>
+        <y>100</y>
+        <width>1061</width>
+        <height>611</height>
+       </rect>
+      </property>
+      <property name="styleSheet">
+       <string notr="true">QFrame
+{
+border-radius: 20;
+background-color: rgba(0,0,0,0.8);
+}</string>
+      </property>
+      <property name="frameShape">
+       <enum>QFrame::StyledPanel</enum>
+      </property>
+      <property name="frameShadow">
+       <enum>QFrame::Raised</enum>
+      </property>
+      <widget class="QTableWidget" name="loaded_table_edit">
+       <property name="geometry">
+        <rect>
+         <x>20</x>
+         <y>20</y>
+         <width>1021</width>
+         <height>571</height>
+        </rect>
+       </property>
+       <property name="styleSheet">
+        <string notr="true">*
+{
+border-radius: 0px;
+background-color: rgba(0, 0, 0,0.5);
+}
+
+QTableWidget{
+background-color: rgba(49, 51, 56,0.8);
+selection-background-color: rgba(0, 0, 0, 0.8);
+alternate-background-color: rgba(40, 43, 46,0.9);
+font-size: 15px;
+border-radius: 0px;
+}
+
+QHeaderView::section
+{
+font-size: 18px;
+color: white;
+background-color: rgba(0, 0, 0,0.5);
+selection-background-color: rgba(0, 0, 0, 0.8);
+border-radius: 0px;
+}
+
+QTableCornerButton::section
+{
+background-color: rgb(0, 0, 0);
+}</string>
+       </property>
+       <property name="sizeAdjustPolicy">
+        <enum>QAbstractScrollArea::AdjustToContents</enum>
+       </property>
+       <property name="alternatingRowColors">
+        <bool>true</bool>
+       </property>
+       <property name="gridStyle">
+        <enum>Qt::SolidLine</enum>
+       </property>
+       <attribute name="horizontalHeaderVisible">
+        <bool>true</bool>
+       </attribute>
+       <attribute name="horizontalHeaderCascadingSectionResizes">
+        <bool>false</bool>
+       </attribute>
+       <attribute name="horizontalHeaderStretchLastSection">
+        <bool>false</bool>
+       </attribute>
+       <attribute name="verticalHeaderVisible">
+        <bool>true</bool>
+       </attribute>
+       <attribute name="verticalHeaderCascadingSectionResizes">
+        <bool>false</bool>
+       </attribute>
+       <attribute name="verticalHeaderHighlightSections">
+        <bool>true</bool>
+       </attribute>
+       <attribute name="verticalHeaderStretchLastSection">
+        <bool>false</bool>
+       </attribute>
+      </widget>
+     </widget>
+     <widget class="QLabel" name="selected_table_label_2">
+      <property name="geometry">
+       <rect>
+        <x>20</x>
+        <y>730</y>
+        <width>1061</width>
+        <height>61</height>
+       </rect>
+      </property>
+      <property name="font">
+       <font>
+        <family>Trebuchet MS</family>
+        <pointsize>-1</pointsize>
+       </font>
+      </property>
+      <property name="styleSheet">
+       <string notr="true">background-color: rgba(0,0,0,0.7);</string>
+      </property>
+      <property name="text">
+       <string>Functionality Space</string>
+      </property>
+      <property name="alignment">
+       <set>Qt::AlignCenter</set>
+      </property>
+     </widget>
+    </widget>
    </item>
-   <item>
-    <property name="text">
-     <string>50</string>
-    </property>
-   </item>
-   <item>
-    <property name="text">
-     <string>25</string>
-    </property>
-   </item>
-   <item>
-    <property name="text">
-     <string>10</string>
-    </property>
-   </item>
-   <item>
-    <property name="text">
-     <string>5</string>
-    </property>
-   </item>
-  </widget>
-  <widget class="QTableWidget" name="loaded_table_edit">
-   <property name="geometry">
-    <rect>
-     <x>20</x>
-     <y>120</y>
-     <width>1161</width>
-     <height>661</height>
-    </rect>
-   </property>
-  </widget>
+  </layout>
  </widget>
  <resources/>
  <connections/>

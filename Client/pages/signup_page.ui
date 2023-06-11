@@ -9,8 +9,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>730</width>
-    <height>652</height>
+    <width>484</width>
+    <height>562</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -253,7 +253,7 @@ border-radius:60px;
       <property name="font">
        <font>
         <family>Trebuchet MS</family>
-        <pointsize>1</pointsize>
+        <pointsize>-1</pointsize>
        </font>
       </property>
       <property name="cursor">
