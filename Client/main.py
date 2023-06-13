@@ -24,7 +24,6 @@ class LoginPage(QDialog):
         self.linkedin_button.clicked.connect(self.open_linkedin)
 
     def login_function(self):
-
         global CLIENT                   
         username = str(self.username_line_edit.text())
         password = str(self.password_line_edit.text())
@@ -34,28 +33,21 @@ class LoginPage(QDialog):
         self.password_line_edit.setText("")
 
         if username != "" and password !="":
-            try:
+
+            CLIENT.sendall(username.encode())
+            CLIENT.sendall(enc_password.encode())
+
+            response = CLIENT.recv(1024).decode()
+
+            if response == "True":
+                self.open_user_page()
+
+            else:
+                CLIENT.shutdown(socket.SHUT_RDWR)
+                CLIENT.close()
+                CLIENT = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 CLIENT.connect((getenv("pub_Ip"), int(getenv("pub_port"))))
-
-                connected = CLIENT.recv(1024).decode()
-                
-                if connected == "Connected":
-                    CLIENT.sendall(username.encode())
-                    CLIENT.sendall(enc_password.encode())
-
-                response = CLIENT.recv(1024).decode()
-
-                if response == "True":
-                    self.open_user_page()
-
-                else:
-                    CLIENT.shutdown(socket.SHUT_RDWR)
-                    CLIENT.close()
-                    CLIENT = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                    CLIENT.connect((getenv("pub_Ip"), int(getenv("pub_port"))))
-                    print("Failed")
-            except:
-                print("Cannot connect to server.")
+                print("Failed")
         else:
             print("Enter your credentials to login.")
 
@@ -100,6 +92,7 @@ class UserPage(QDialog):
         loadUi(r'Client\pages\user_page_test.ui', self)
         self.table_select_combobox.currentIndexChanged.connect(lambda: UserPage.request_handler(self, "update_loaded_table"))
         self.result_select_combobox.currentIndexChanged.connect(lambda: UserPage.request_handler(self, "update_loaded_table"))
+        self.logout_button.clicked.connect(lambda: UserPage.request_handler(self, "log_out"))
         self.loaded_table_edit
 
         UserPage.request_handler(self, "get_init_data")
@@ -119,6 +112,16 @@ class UserPage(QDialog):
             UserPage.send_data(self, data)
             table_data = UserPage.recieve_data(self)
             UserPage.update_table_view(self, table_data)
+        
+        elif request == "log_out":
+            self.loaded_table_edit.clear()
+            data = [request]
+            UserPage.send_data(self, data)
+            user_window = self
+            widget.removeWidget(user_window)
+            widget.addWidget(login_window)
+
+
     
     def send_data(self, data):
         json_data = json.dumps(data)
@@ -152,13 +155,11 @@ class UserPage(QDialog):
             pass
 
     def update_table_view(self, table_data):
-
         self.loaded_table_edit.clear()
 
         if table_data != []:
             
             table_data = table_data[0]
-
             df = pd.DataFrame.from_dict(table_data)
             column_titles = list(df.columns.values)
             column_titles = [str(title) for title in column_titles]
@@ -180,6 +181,7 @@ class UserPage(QDialog):
 ######################################### MAIN STARTUP SCRIPT #########################################################
 
 load_dotenv()
+CLIENT.connect((getenv("pub_Ip"), int(getenv("pub_port"))))
 app=QApplication(sys.argv)
 widget=QtWidgets.QStackedWidget()
 login_window = LoginPage()

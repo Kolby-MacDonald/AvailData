@@ -10,7 +10,6 @@ from dotenv import load_dotenv
 # Primary function controller.
 def server_controller(server): 
     
-    server.sendall("Connected".encode())
     username = server.recv(1024)
     password = server.recv(1024)
  
@@ -73,6 +72,9 @@ def recieve_data(server, cursor, user_table_access):
                 requested_table = json_data[1]
                 result_select = int(json_data[2])
                 update_loaded_table(server, cursor, user_table_names, requested_table, result_select)
+
+            elif request_type == "log_out":
+                server_controller(server)
         except:
             pass
 
@@ -124,17 +126,19 @@ def update_loaded_table(server, cursor, user_table_names, requested_table, resul
 
 ######################################## START-UP SCRIPT ###################################################
 
+def main():
+    # Load environment variables.
+    load_dotenv()
 
-# Load environment variables.
-load_dotenv()
+    # Define and connect to server.
+    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server_socket.bind((os.getenv("pub_Ip"), int(os.getenv("pub_port"))))
+    server_socket.listen()
+    print("Server Online.")
 
-# Define and connect to server.
-server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-server_socket.bind((os.getenv("pub_Ip"), int(os.getenv("pub_port"))))
-server_socket.listen()
-print("Server Online.")
+    while True:
+        server, addr = server_socket.accept()
+        print(f"incoming connection by: {addr}")
+        threading.Thread(target=server_controller, args=(server,)).start()
 
-while True:
-    server, addr = server_socket.accept()
-    print(f"incoming connection by: {addr}")
-    threading.Thread(target=server_controller, args=(server,)).start()
+main()
