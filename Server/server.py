@@ -6,13 +6,18 @@ import pandas as pd
 import mysql.connector
 from dotenv import load_dotenv
 
+import rsa
+
 
 # Primary function controller.
-def server_controller(server): 
+def server_controller(server):
+
+
+    #username = server.recv(1024)
+    #password = server.recv(1024)
+
+    credentials = recieve_data(server, None, None)
     
-    username = server.recv(1024)
-    password = server.recv(1024)
- 
     db = mysql.connector.connect(
         host=os.getenv("db_host"), 
         user=os.getenv("db_user"), 
@@ -22,28 +27,30 @@ def server_controller(server):
     
     cursor = db.cursor()
 
-    print(f"{username.decode()} is attempting access to the database.")
+    print(f"{str(credentials[1])} is attempting access to the database.")
 
     cursor.execute(
         f'''SELECT * FROM {os.getenv("db_table_name")} where username = %s and password = %s''',
-        (username.decode(), password.decode())
+        (str(credentials[1]), str(credentials[2]))
         )
     
     try:
         results = cursor.fetchone()
         user_name = results[1]
-        user_table_access = results[3]
+        user_table_access = results[5]
     except:
         pass
 
     if results:
-        server.sendall("True".encode())
+        data = "True"
+        send_data(server, data)
+        #server.sendall("True".encode())
         print(f"{user_name} has accessed the database.")
         recieve_data(server, cursor, user_table_access)
     
     else:
         server.sendall("False".encode())
-        print(f"{username.decode()} has failed to access the database.")
+        print("Credentials do not exist.")
 
 ######################################## SERVER RESPONSE FUNCTIONS ###################################################
 
@@ -65,7 +72,10 @@ def recieve_data(server, cursor, user_table_access):
             json_data = json.loads(data)
             request_type = json_data[0]
 
-            if request_type == "get_init_data":
+            if request_type == "login":
+                return(json_data)
+            
+            elif request_type == "get_init_data":
                 user_table_names = init_data_response(server, cursor, user_table_access)
             
             elif request_type == "update_loaded_table":

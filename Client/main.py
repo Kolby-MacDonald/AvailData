@@ -10,6 +10,8 @@ from PyQt5.uic import loadUi
 from dotenv import load_dotenv
 from PyQt5.QtWidgets import QDialog, QApplication
 
+import rsa
+
 CLIENT = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
 ################################################## LOG IN CLASS #######################################################
@@ -24,7 +26,8 @@ class LoginPage(QDialog):
         self.linkedin_button.clicked.connect(self.open_linkedin)
 
     def login_function(self):
-        global CLIENT                   
+        global CLIENT
+
         username = str(self.username_line_edit.text())
         password = str(self.password_line_edit.text())
         enc_password = hashlib.sha256(password.encode()).hexdigest()
@@ -33,11 +36,15 @@ class LoginPage(QDialog):
         self.password_line_edit.setText("")
 
         if username != "" and password !="":
+            request = "login"
+            data = [request, username, enc_password]
+            send_data(data)
+            #CLIENT.sendall(username.encode())
+            #CLIENT.sendall(enc_password.encode())
 
-            CLIENT.sendall(username.encode())
-            CLIENT.sendall(enc_password.encode())
-
-            response = CLIENT.recv(1024).decode()
+            response = recieve_data()
+            print(response)
+            #response = CLIENT.recv(1024).decode()
 
             if response == "True":
                 self.open_user_page()
@@ -103,46 +110,23 @@ class UserPage(QDialog):
 
         if request == "get_init_data":
             data = [request]
-            UserPage.send_data(self, data)
-            user_table_names = UserPage.recieve_data(self)
+            send_data(data)
+            user_table_names = recieve_data()
             UserPage.get_init_data(self, user_table_names)
 
         elif request == "update_loaded_table":
             data = [request, self.table_select_combobox.currentText(), self.result_select_combobox.currentText()]
-            UserPage.send_data(self, data)
-            table_data = UserPage.recieve_data(self)
+            send_data(data)
+            table_data = recieve_data()
             UserPage.update_table_view(self, table_data)
         
         elif request == "log_out":
             self.loaded_table_edit.clear()
             data = [request]
-            UserPage.send_data(self, data)
+            send_data(data)
             user_window = self
             widget.removeWidget(user_window)
             widget.addWidget(login_window)
-
-
-    
-    def send_data(self, data):
-        json_data = json.dumps(data)
-        data_length = len(json_data)
-        header = f"{data_length:<{15}}".encode('utf-8')
-
-        CLIENT.sendall(header + json_data.encode('utf-8'))
-
-
-    def recieve_data(self):
-        try:
-            header = CLIENT.recv(15)
-            if not header:
-                return None
-
-            data_length = int(header.strip())
-            data = CLIENT.recv(data_length).decode('utf-8')
-            json_data = json.loads(data)
-            return(json_data)
-        except:
-            pass
 
     ######################################## CLIENT UI FUNCTIONS ######################################################
 
@@ -178,10 +162,37 @@ class UserPage(QDialog):
             print("No Acessable Tables Found")
 
 
+def send_data(data):
+    json_data = json.dumps(data)
+    data_length = len(json_data)
+    header = f"{data_length:<{15}}".encode('utf-8')
+
+    CLIENT.sendall(header + json_data.encode('utf-8'))
+
+
+def recieve_data():
+    try:
+        header = CLIENT.recv(15)
+        if not header:
+            return None
+
+        data_length = int(header.strip())
+        data = CLIENT.recv(data_length).decode('utf-8')
+        json_data = json.loads(data)
+        return(json_data)
+    except:
+        pass
+
+
 ######################################### MAIN STARTUP SCRIPT #########################################################
 
 load_dotenv()
+
+
 CLIENT.connect((getenv("pub_Ip"), int(getenv("pub_port"))))
+# SEND THE CLIENTS PUBLIC KEY
+
+
 app=QApplication(sys.argv)
 widget=QtWidgets.QStackedWidget()
 login_window = LoginPage()
