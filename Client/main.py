@@ -10,8 +10,6 @@ from PyQt5.uic import loadUi
 from dotenv import load_dotenv
 from PyQt5.QtWidgets import QDialog, QApplication
 
-import rsa
-
 CLIENT = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
 ################################################## LOG IN CLASS #######################################################
@@ -27,7 +25,7 @@ class LoginPage(QDialog):
 
     def login_function(self):
         global CLIENT
-
+    
         username = str(self.username_line_edit.text())
         password = str(self.password_line_edit.text())
         enc_password = hashlib.sha256(password.encode()).hexdigest()
@@ -36,24 +34,19 @@ class LoginPage(QDialog):
         self.password_line_edit.setText("")
 
         if username != "" and password !="":
+            CLIENT.connect((getenv("pub_Ip"), int(getenv("pub_port"))))
+
             request = "login"
             data = [request, username, enc_password]
             send_data(data)
-            #CLIENT.sendall(username.encode())
-            #CLIENT.sendall(enc_password.encode())
 
             response = recieve_data()
-            print(response)
-            #response = CLIENT.recv(1024).decode()
 
-            if response == "True":
+            if response == True:
                 self.open_user_page()
 
             else:
-                CLIENT.shutdown(socket.SHUT_RDWR)
-                CLIENT.close()
-                CLIENT = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                CLIENT.connect((getenv("pub_Ip"), int(getenv("pub_port"))))
+                close_socket()
                 print("Failed")
         else:
             print("Enter your credentials to login.")
@@ -124,6 +117,7 @@ class UserPage(QDialog):
             self.loaded_table_edit.clear()
             data = [request]
             send_data(data)
+            close_socket()
             user_window = self
             widget.removeWidget(user_window)
             widget.addWidget(login_window)
@@ -166,9 +160,7 @@ def send_data(data):
     json_data = json.dumps(data)
     data_length = len(json_data)
     header = f"{data_length:<{15}}".encode('utf-8')
-
     CLIENT.sendall(header + json_data.encode('utf-8'))
-
 
 def recieve_data():
     try:
@@ -183,15 +175,15 @@ def recieve_data():
     except:
         pass
 
+def close_socket():
+    global CLIENT
+    CLIENT.shutdown(socket.SHUT_RDWR)
+    CLIENT.close()
+    CLIENT = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
 ######################################### MAIN STARTUP SCRIPT #########################################################
 
 load_dotenv()
-
-
-CLIENT.connect((getenv("pub_Ip"), int(getenv("pub_port"))))
-# SEND THE CLIENTS PUBLIC KEY
-
 
 app=QApplication(sys.argv)
 widget=QtWidgets.QStackedWidget()

@@ -6,8 +6,6 @@ import pandas as pd
 import mysql.connector
 from dotenv import load_dotenv
 
-import rsa
-
 
 # Primary function controller.
 def server_controller(server):
@@ -42,7 +40,7 @@ def server_controller(server):
         pass
 
     if results:
-        data = "True"
+        data = True
         send_data(server, data)
         #server.sendall("True".encode())
         print(f"{user_name} has accessed the database.")
