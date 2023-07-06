@@ -4,11 +4,15 @@ import socket
 import hashlib
 import webbrowser
 import pandas as pd
-from os import getenv
+import os
 from PyQt5 import QtWidgets
 from PyQt5.uic import loadUi
 from dotenv import load_dotenv
 from PyQt5.QtWidgets import QDialog, QApplication
+
+
+from OpenSSL import crypto
+import ssl
 
 CLIENT = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
@@ -34,10 +38,11 @@ class LoginPage(QDialog):
         self.password_line_edit.setText("")
 
         if username != "" and password !="":
-            CLIENT.connect((getenv("pub_Ip"), int(getenv("pub_port"))))
+            generate_ssl_certificate(str(os.getenv("cert_file")), str(os.getenv("key_file")))  
+            CLIENT = wrap_socket_with_certificates(str(os.getenv("cert_file")), str(os.getenv("key_file")))
+            CLIENT.connect((os.getenv("pub_ip"), int(os.getenv("pub_port"))))
 
-            request = "login"
-            data = [request, username, enc_password]
+            data = ["login", username, enc_password]
             send_data(data)
 
             response = recieve_data()
@@ -97,7 +102,7 @@ class UserPage(QDialog):
 
         UserPage.request_handler(self, "get_init_data")
 
-    ######################################## CLIENT REQUEST FUNCTIONS #################################################
+    #----------------------------------------------- CLIENT REQUEST FUNCTIONS #---------------------------------------
 
     def request_handler(self, request):
 
@@ -122,7 +127,7 @@ class UserPage(QDialog):
             widget.removeWidget(user_window)
             widget.addWidget(login_window)
 
-    ######################################## CLIENT UI FUNCTIONS ######################################################
+    #----------------------------------------------- CLIENT UI FUNCTIONS -------------------------------------------
 
     def get_init_data(self, user_table_names):
 
@@ -155,6 +160,7 @@ class UserPage(QDialog):
         else:
             print("No Acessable Tables Found")
 
+######################################### SEND AND RECIEVE BUFFERED DATA ########################################
 
 def send_data(data):
     json_data = json.dumps(data)
@@ -181,10 +187,47 @@ def close_socket():
     CLIENT.close()
     CLIENT = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
+######################################### SECURE SOCKET LAYER ########################################################
+
+def generate_ssl_certificate(cert_file, key_file):
+    # Create a new key pair
+    key = crypto.PKey()
+    key.generate_key(crypto.TYPE_RSA, 2048)
+    
+    # Create a self-signed certificate
+    cert = crypto.X509()
+    cert.get_subject().CN = "AvailData"
+    cert.set_serial_number(1000)
+    cert.gmtime_adj_notBefore(0)
+    cert.gmtime_adj_notAfter(365 * 24 * 60 * 60)  # Valid for 1 year
+    cert.set_issuer(cert.get_subject())
+    cert.set_pubkey(key)
+    cert.sign(key, "sha256")
+    
+    # Save the certificate and private key to files
+    with open(cert_file, "wb") as cert_file:
+        cert_file.write(crypto.dump_certificate(crypto.FILETYPE_PEM, cert))
+    
+    with open(key_file, "wb") as key_file:
+        key_file.write(crypto.dump_privatekey(crypto.FILETYPE_PEM, key))
+    
+    print("Certificate and private key generated successfully.")
+
+    return(cert_file, key_file)
+
+def wrap_socket_with_certificates(cert_file, key_file):
+    # Wrap the socket with SSL/TLS
+    context = ssl.create_default_context(ssl.Purpose.SERVER_AUTH)
+    context.load_cert_chain(certfile=cert_file, keyfile=key_file)
+    context.check_hostname = False
+    context.verify_mode = ssl.CERT_NONE
+    ssl_sock = context.wrap_socket(CLIENT)
+
+    return(ssl_sock)
+
 ######################################### MAIN STARTUP SCRIPT #########################################################
 
 load_dotenv()
-
 app=QApplication(sys.argv)
 widget=QtWidgets.QStackedWidget()
 login_window = LoginPage()

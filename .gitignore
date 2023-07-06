@@ -2,3 +2,5 @@
 Server/.env
 Client/.env
 Testing/client_side_encryption/commands.py
+client_cert.pem
+*.pem

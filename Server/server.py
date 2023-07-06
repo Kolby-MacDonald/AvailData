@@ -6,13 +6,11 @@ import pandas as pd
 import mysql.connector
 from dotenv import load_dotenv
 
+from OpenSSL import crypto
+import ssl
 
 # Primary function controller.
 def server_controller(server):
-
-
-    #username = server.recv(1024)
-    #password = server.recv(1024)
 
     credentials = recieve_data(server, None, None)
     
@@ -49,6 +47,33 @@ def server_controller(server):
     else:
         server.sendall("False".encode())
         print("Credentials do not exist.")
+
+######################################## SOCKET SECURITY LAYER #######################################################
+def generate_ssl_certificate(cert_file, key_file):
+    # Create a new key pair
+    key = crypto.PKey()
+    key.generate_key(crypto.TYPE_RSA, 2048)
+    
+    # Create a self-signed certificate
+    cert = crypto.X509()
+    cert.get_subject().CN = "AvailData"
+    cert.set_serial_number(1000)
+    cert.gmtime_adj_notBefore(0)
+    cert.gmtime_adj_notAfter(365 * 24 * 60 * 60)  # Valid for 1 year
+    cert.set_issuer(cert.get_subject())
+    cert.set_pubkey(key)
+    cert.sign(key, "sha256")
+    
+    # Save the certificate and private key to files
+    with open(cert_file, "wb") as cert_file:
+        cert_file.write(crypto.dump_certificate(crypto.FILETYPE_PEM, cert))
+    
+    with open(key_file, "wb") as key_file:
+        key_file.write(crypto.dump_privatekey(crypto.FILETYPE_PEM, key))
+    
+    print("Certificate and private key generated successfully.")
+
+    return(cert_file, key_file)
 
 ######################################## SERVER RESPONSE FUNCTIONS ###################################################
 
@@ -131,21 +156,32 @@ def update_loaded_table(server, cursor, user_table_names, requested_table, resul
     data = [df]
     send_data(server, data)
 
+######################################## SCRIPT EXIT CLEANUP ###############################################
+
+
 
 ######################################## START-UP SCRIPT ###################################################
 
 def main():
-    # Load environment variables.
-    load_dotenv()
 
-    # Define and connect to server.
+    load_dotenv()
+    cert_file = str(os.getenv("cert_file"))
+    key_file =  str(os.getenv("key_file"))
+
+    generate_ssl_certificate(cert_file, key_file)
+
+    context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
+    context.load_cert_chain(certfile=cert_file, keyfile=key_file)
+    context.verify_mode = ssl.CERT_NONE
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server_socket.bind((os.getenv("pub_Ip"), int(os.getenv("pub_port"))))
     server_socket.listen()
+    ssl_server_socket = context.wrap_socket(server_socket, server_side=True)
+
     print("Server Online.")
 
     while True:
-        server, addr = server_socket.accept()
+        server, addr = ssl_server_socket.accept()
         print(f"incoming connection by: {addr}")
         threading.Thread(target=server_controller, args=(server,)).start()
 
