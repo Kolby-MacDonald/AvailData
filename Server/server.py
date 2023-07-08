@@ -1,18 +1,18 @@
 import os
+import ssl
 import json
 import socket
 import threading
 import pandas as pd
 import mysql.connector
+from OpenSSL import crypto
 from dotenv import load_dotenv
 
-from OpenSSL import crypto
-import ssl
 
 # Primary function controller.
 def server_controller(server):
 
-    credentials = recieve_data(server, None, None)
+    credentials = recieve_data(server, None, None, None, None)
     
     db = mysql.connector.connect(
         host=os.getenv("db_host"), 
@@ -32,8 +32,15 @@ def server_controller(server):
     
     try:
         results = cursor.fetchone()
-        user_name = results[1]
-        user_table_access = results[5]
+        user_db_id = results[0]
+        employee_name = results[1]
+        job_title = results[2] 
+        db_role = results[3]
+        username = results[4]
+        #password = results[5]
+        #email = results[6]
+        user_write_table_access = results[7]
+        user_read_table_access = results[8]
     except:
         pass
 
@@ -41,12 +48,116 @@ def server_controller(server):
         data = True
         send_data(server, data)
         #server.sendall("True".encode())
-        print(f"{user_name} has accessed the database.")
-        recieve_data(server, cursor, user_table_access)
+        print(f" {user_db_id} | {employee_name}:{username} | {job_title}:{db_role} | has accessed the database.")
+        recieve_data(server, cursor, db_role, user_write_table_access, user_read_table_access)
     
     else:
         server.sendall("False".encode())
         print("Credentials do not exist.")
+
+######################################## SERVER RESPONSE FUNCTIONS ###################################################
+
+def send_data(server, data):
+    json_data = json.dumps(data)
+    data_length = len(json_data)
+    header = f"{data_length:<{15}}".encode('utf-8')
+    server.sendall(header + json_data.encode('utf-8'))
+
+def recieve_data(server, cursor, db_role, user_write_table_access, user_read_table_access):
+    print("In Recieve Data")
+    while True:
+        try:
+            header = server.recv(15)
+            if not header:
+                break
+
+            data_length = int(header.strip())
+            data = server.recv(data_length).decode('utf-8')
+            json_data = json.loads(data)
+            request_type = json_data[0]
+
+            if request_type == "login":
+                return(json_data)
+            
+            elif request_type == "get_init_data":
+                user_table_names = init_data_response(server, cursor, db_role, user_write_table_access, user_read_table_access)
+                user_write_table_names = user_table_names[0]
+                user_read_table_names = user_table_names[1]
+            
+            elif request_type == "update_loaded_table":
+                requested_table = json_data[1]
+                result_select = int(json_data[2])
+                update_loaded_table(server, cursor, user_write_table_names, user_read_table_names, requested_table, result_select)
+
+            elif request_type == "log_out":
+                server_controller(server)
+        except:
+            pass
+
+
+######################################## DATA MANIPULATION FUNCTIONS ###################################################
+
+def init_data_response(server, cursor, db_role, user_write_table_access, user_read_table_access):
+    cursor.execute(f'''SHOW TABLES''')
+    database_table_names_curse = cursor.fetchall()
+
+    #print(cursor.execute(f'''SHOW TABLES''').fetchone())
+
+
+    database_table_names = []
+    user_write_table_names = []
+    user_read_table_names = []
+
+    for tables in database_table_names_curse:
+            database_table_names.append(tables[0])
+
+    #Write control-------------------------------------------------------------------------------
+
+    if user_write_table_access == "all" or db_role == "admin" :
+        user_write_table_names = database_table_names
+
+    elif type(user_write_table_access) == type(''):
+        apparent_table_names = user_write_table_access.split(', ')
+        for table_name in apparent_table_names:
+            if table_name in database_table_names and table_name not in user_write_table_names:
+                user_write_table_names.append(table_name)
+
+    #Read Control---------------------------------------------------------------------------
+    
+    if user_read_table_access == "all" and db_role != "admin":
+        user_read_table_access == database_table_names
+
+    elif type(user_read_table_access) == type(''):
+        apparent_table_names = user_read_table_access.split(', ')
+        for table_name in apparent_table_names:
+            if table_name in database_table_names and table_name not in user_read_table_names and table_name not in user_write_table_names:
+                user_read_table_names.append(table_name)
+
+    data = [user_write_table_names, user_read_table_names]
+    send_data(server,data)
+
+    return(user_write_table_names, user_read_table_names)
+
+def update_loaded_table(server, cursor, user_write_table_names, user_read_table_names, requested_table, result_select):
+
+    df_column_attributes = []
+    column_names = []
+    df = pd.DataFrame()
+
+    user_table_names = user_read_table_names + user_write_table_names
+
+    if len(user_table_names) >= 1 and requested_table in user_table_names:
+        cursor.execute(f'''SHOW COLUMNS FROM {requested_table}''')
+        df_column_attributes = cursor.fetchall()
+        for column in df_column_attributes:
+            column_names.append(column[0])
+        
+        cursor.execute(f'''SELECT * FROM {requested_table} LIMIT {result_select}''')
+        df = pd.DataFrame(cursor.fetchall(), columns=column_names)
+        df = df.to_dict()
+
+    data = [df]
+    send_data(server, data)
 
 ######################################## SOCKET SECURITY LAYER #######################################################
 def generate_ssl_certificate(cert_file, key_file):
@@ -75,89 +186,6 @@ def generate_ssl_certificate(cert_file, key_file):
 
     return(cert_file, key_file)
 
-######################################## SERVER RESPONSE FUNCTIONS ###################################################
-
-def send_data(server, data):
-    json_data = json.dumps(data)
-    data_length = len(json_data)
-    header = f"{data_length:<{15}}".encode('utf-8')
-    server.sendall(header + json_data.encode('utf-8'))
-
-def recieve_data(server, cursor, user_table_access):
-    while True:
-        try:
-            header = server.recv(15)
-            if not header:
-                break
-
-            data_length = int(header.strip())
-            data = server.recv(data_length).decode('utf-8')
-            json_data = json.loads(data)
-            request_type = json_data[0]
-
-            if request_type == "login":
-                return(json_data)
-            
-            elif request_type == "get_init_data":
-                user_table_names = init_data_response(server, cursor, user_table_access)
-            
-            elif request_type == "update_loaded_table":
-                requested_table = json_data[1]
-                result_select = int(json_data[2])
-                update_loaded_table(server, cursor, user_table_names, requested_table, result_select)
-
-            elif request_type == "log_out":
-                server_controller(server)
-        except:
-            pass
-
-
-######################################## DATA MANIPULATION FUNCTIONS ###################################################
-
-def init_data_response(server, cursor, user_table_access):
-    cursor.execute(f'''SHOW TABLES''')
-    database_table_names_curse = cursor.fetchall()
-
-    database_table_names = []
-    user_table_names = []
-
-    for tables in database_table_names_curse:
-            database_table_names.append(tables[0])
-
-    if user_table_access == "all":
-        user_table_names = database_table_names
-
-    elif type(user_table_access) == type(''):
-        apparent_table_names = user_table_access.split(', ')
-        for table_name in apparent_table_names:
-            if table_name in database_table_names and table_name not in user_table_names:
-                user_table_names.append(table_name)
-
-    data = [user_table_names]
-    send_data(server, data)
-    return(user_table_names)
-
-def update_loaded_table(server, cursor, user_table_names, requested_table, result_select):
-
-    df_column_attributes = []
-    column_names = []
-    df = pd.DataFrame()
-
-    if len(user_table_names) >= 1 and requested_table in user_table_names:
-        cursor.execute(f'''SHOW COLUMNS FROM {requested_table}''')
-        df_column_attributes = cursor.fetchall()
-        for column in df_column_attributes:
-            column_names.append(column[0])
-        
-        cursor.execute(f'''SELECT * FROM {requested_table} LIMIT {result_select}''')
-        df = pd.DataFrame(cursor.fetchall(), columns=column_names)
-        df = df.to_dict()
-
-    data = [df]
-    send_data(server, data)
-
-######################################## SCRIPT EXIT CLEANUP ###############################################
-
 
 
 ######################################## START-UP SCRIPT ###################################################
@@ -175,8 +203,8 @@ def main():
     context.verify_mode = ssl.CERT_NONE
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server_socket.bind((os.getenv("pub_Ip"), int(os.getenv("pub_port"))))
-    server_socket.listen()
     ssl_server_socket = context.wrap_socket(server_socket, server_side=True)
+    ssl_server_socket.listen()
 
     print("Server Online.")
 

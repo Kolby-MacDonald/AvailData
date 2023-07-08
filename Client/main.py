@@ -1,20 +1,18 @@
+import os
 import sys
+import ssl
 import json
 import socket
 import hashlib
 import webbrowser
 import pandas as pd
-import os
+from OpenSSL import crypto
 from PyQt5 import QtWidgets
 from PyQt5.uic import loadUi
 from dotenv import load_dotenv
-from PyQt5.QtWidgets import QDialog, QApplication
+from PyQt5.QtWidgets import QDialog, QApplication, QTableWidget, QTableWidgetItem, QAbstractItemView
+from PyQt5.QtCore import Qt
 
-
-from OpenSSL import crypto
-import ssl
-
-CLIENT = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
 ################################################## LOG IN CLASS #######################################################
 
@@ -29,7 +27,7 @@ class LoginPage(QDialog):
 
     def login_function(self):
         global CLIENT
-    
+        CLIENT = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         username = str(self.username_line_edit.text())
         password = str(self.password_line_edit.text())
         enc_password = hashlib.sha256(password.encode()).hexdigest()
@@ -98,7 +96,7 @@ class UserPage(QDialog):
         self.table_select_combobox.currentIndexChanged.connect(lambda: UserPage.request_handler(self, "update_loaded_table"))
         self.result_select_combobox.currentIndexChanged.connect(lambda: UserPage.request_handler(self, "update_loaded_table"))
         self.logout_button.clicked.connect(lambda: UserPage.request_handler(self, "log_out"))
-        self.loaded_table_edit
+        self.readwrite_radioButton.clicked.connect(lambda: UserPage.readwrite_table_control(self))
 
         UserPage.request_handler(self, "get_init_data")
 
@@ -110,6 +108,8 @@ class UserPage(QDialog):
             data = [request]
             send_data(data)
             user_table_names = recieve_data()
+            self.user_write_table_names = user_table_names[0]
+            self.user_read_table_names = user_table_names[1]
             UserPage.get_init_data(self, user_table_names)
 
         elif request == "update_loaded_table":
@@ -131,14 +131,25 @@ class UserPage(QDialog):
 
     def get_init_data(self, user_table_names):
 
-        if user_table_names != []:
-            self.table_select_combobox.addItems(user_table_names[0])
+        if self.user_write_table_names != [] or self.user_read_table_names != []:
+            self.table_select_combobox.addItems(self.user_write_table_names + self.user_read_table_names)
         else:
-            print("No Acessable Tables Found")
-            pass
+            self.readwrite_radioButton.setChecked(False)
+            self.readwrite_radioButton.setEnabled(False)
+            self.readwrite_radioButton.setText("No Selection")
 
     def update_table_view(self, table_data):
         self.loaded_table_edit.clear()
+        
+        if self.table_select_combobox.currentText() not in self.user_write_table_names:
+            self.readwrite_radioButton.setChecked(False)
+            self.readwrite_radioButton.setEnabled(False)
+            self.readwrite_radioButton.setText("Locked Table")
+            self.readwrite_table_control()
+        elif self.table_select_combobox.currentText() in self.user_write_table_names:
+            self.readwrite_radioButton.setText("Edit Mode")
+            self.readwrite_radioButton.setEnabled(True)
+            self.readwrite_table_control()
 
         if table_data != []:
             
@@ -150,15 +161,36 @@ class UserPage(QDialog):
             self.loaded_table_edit.setColumnCount(len(df.columns))
             self.loaded_table_edit.setRowCount(len(df.index))
             self.loaded_table_edit.setHorizontalHeaderLabels(column_titles)
+            self.loaded_table_edit.resizeColumnsToContents()
+
+            # Add extra 15 pixels on either side
+            for column in range(self.loaded_table_edit.columnCount()):
+                width = self.loaded_table_edit.columnWidth(column)
+                self.loaded_table_edit.setColumnWidth(column, width + 30)
+            
+            for row in range(self.loaded_table_edit.rowCount()):
+                item = QTableWidgetItem(str(row + 1))
+                item.setTextAlignment(Qt.AlignCenter)  # Qt.AlignCenter
+                self.loaded_table_edit.setVerticalHeaderItem(row, item)
 
             for column, title in enumerate(column_titles):
                 for row, item in enumerate(df[title]):
                     item = str(item)
                     if item == 'None':
                         item = ''
-                    self.loaded_table_edit.setItem(row, column, QtWidgets.QTableWidgetItem(item))
+                    self.loaded_table_edit.setItem(row, column, QTableWidgetItem(item))
+
         else:
             print("No Acessable Tables Found")
+    
+    def readwrite_table_control(self):
+        if self.readwrite_radioButton.isChecked():
+            self.loaded_table_edit.setEditTriggers(QAbstractItemView.DoubleClicked | QAbstractItemView.EditKeyPressed)  # Enable editing
+            self.loaded_table_edit.setSelectionMode(QAbstractItemView.ExtendedSelection)
+        elif not self.readwrite_radioButton.isChecked():
+            self.loaded_table_edit.setEditTriggers(QAbstractItemView.NoEditTriggers)
+            self.loaded_table_edit.setSelectionMode(QAbstractItemView.NoSelection)
+            self.loaded_table_edit.clearSelection()
 
 ######################################### SEND AND RECIEVE BUFFERED DATA ########################################
 

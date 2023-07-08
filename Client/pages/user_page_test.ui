@@ -63,7 +63,6 @@ background-position: center;
 background:rgba(0,0,0,0.8);
 background-color: rgb(49, 51, 56);
 font-family: Trebuchet MS;
-font-size:20px;
 color: white;
 }
 
@@ -76,7 +75,7 @@ QLabel
 {
 background-color:rgba(0,0,0,0.5);
 border-radius: 15;
-color: rgb(0, 255, 0);
+color: white;
 }
 </string>
      </property>
@@ -98,11 +97,12 @@ color: rgb(0, 255, 0);
       <property name="font">
        <font>
         <family>Trebuchet MS</family>
-        <pointsize>1</pointsize>
+        <pointsize>-1</pointsize>
        </font>
       </property>
       <property name="styleSheet">
-       <string notr="true">background-color: rgba(0,0,0,0.8);</string>
+       <string notr="true">background-color: rgba(0,0,0,0.8);
+font-size:19px;</string>
       </property>
       <property name="text">
        <string>  Selected Table</string>
@@ -123,7 +123,7 @@ color: rgb(0, 255, 0);
       <property name="styleSheet">
        <string notr="true">border-radius: 10px;
 background-color: rgba(49, 51, 56,0.8);
-font-size: 15;</string>
+font-size:19px;</string>
       </property>
       <property name="editable">
        <bool>false</bool>
@@ -144,7 +144,7 @@ font-size: 15;</string>
       <property name="font">
        <font>
         <family>Trebuchet MS</family>
-        <pointsize>1</pointsize>
+        <pointsize>-1</pointsize>
        </font>
       </property>
       <property name="styleSheet">
@@ -171,11 +171,12 @@ background-color: rgba(0,0,0,0.8);</string>
       <property name="font">
        <font>
         <family>Trebuchet MS</family>
-        <pointsize>1</pointsize>
+        <pointsize>-1</pointsize>
        </font>
       </property>
       <property name="styleSheet">
-       <string notr="true">background-color: rgba(0,0,0,0.8);</string>
+       <string notr="true">background-color: rgba(0,0,0,0.8);
+font-size:19px;</string>
       </property>
       <property name="text">
        <string>Results  </string>
@@ -196,7 +197,7 @@ background-color: rgba(0,0,0,0.8);</string>
       <property name="font">
        <font>
         <family>Trebuchet MS</family>
-        <pointsize>1</pointsize>
+        <pointsize>-1</pointsize>
        </font>
       </property>
       <property name="autoFillBackground">
@@ -204,7 +205,8 @@ background-color: rgba(0,0,0,0.8);</string>
       </property>
       <property name="styleSheet">
        <string notr="true">border-radius: 10px;
-background-color: rgba(49, 51, 56,0.8);</string>
+background-color: rgba(49, 51, 56,0.8);
+font-size:19px;</string>
       </property>
       <property name="sizeAdjustPolicy">
        <enum>QComboBox::AdjustToContentsOnFirstShow</enum>
@@ -249,6 +251,7 @@ background-color: rgba(49, 51, 56,0.8);</string>
 {
 border-radius: 20;
 background-color: rgba(0,0,0,0.8);
+font-size: 15px;
 }</string>
       </property>
       <property name="frameShape">
@@ -258,42 +261,57 @@ background-color: rgba(0,0,0,0.8);
        <enum>QFrame::Raised</enum>
       </property>
       <widget class="QTableWidget" name="loaded_table_edit">
+       <property name="enabled">
+        <bool>true</bool>
+       </property>
        <property name="geometry">
         <rect>
          <x>20</x>
-         <y>20</y>
+         <y>40</y>
          <width>1021</width>
-         <height>571</height>
+         <height>551</height>
         </rect>
        </property>
        <property name="styleSheet">
-        <string notr="true">*
-{
-border-radius: 0px;
-background-color: rgba(0, 0, 0,0.5);
+        <string notr="true">
+QTableView::item:selected {
+    color: white;
+    background-color: black;
+	font-size: 15px;
 }
 
-QTableWidget{
-background-color: rgba(49, 51, 56,0.8);
-selection-background-color: rgba(0, 0, 0, 0.8);
-alternate-background-color: rgba(40, 43, 46,0.9);
-font-size: 15px;
-border-radius: 0px;
+QTableWidget {
+	font-size: 15px;
+    background-color: rgba(49, 51, 56, 0.7);
+    alternate-background-color: rgba(25, 28, 29, 0.8);
+    border-radius: 0px;
 }
 
-QHeaderView::section
-{
-font-size: 18px;
-color: white;
-background-color: rgba(0, 0, 0,0.5);
-selection-background-color: rgba(0, 0, 0, 0.8);
-border-radius: 0px;
+QHeaderView::section {
+    font-size: 18px;
+    background-color: black;
+    border-radius: 0px;
 }
 
-QTableCornerButton::section
-{
-background-color: rgb(0, 0, 0);
-}</string>
+QTableCornerButton::section {
+    background-color: black;
+}
+
+QTableCornerButton::section:selected {
+    color: white;
+    background-color: black;
+}
+
+QTableView::item {
+    background-color: rgba(60, 63, 66, 0.5);
+}
+
+QScrollBar{
+	color: white;
+    background-color: black;
+}
+
+</string>
        </property>
        <property name="sizeAdjustPolicy">
         <enum>QAbstractScrollArea::AdjustToContents</enum>
@@ -303,6 +321,9 @@ background-color: rgb(0, 0, 0);
        </property>
        <property name="gridStyle">
         <enum>Qt::SolidLine</enum>
+       </property>
+       <property name="sortingEnabled">
+        <bool>false</bool>
        </property>
        <attribute name="horizontalHeaderVisible">
         <bool>true</bool>
@@ -326,6 +347,76 @@ background-color: rgb(0, 0, 0);
         <bool>false</bool>
        </attribute>
       </widget>
+      <widget class="QRadioButton" name="readwrite_radioButton">
+       <property name="enabled">
+        <bool>true</bool>
+       </property>
+       <property name="geometry">
+        <rect>
+         <x>930</x>
+         <y>10</y>
+         <width>111</width>
+         <height>21</height>
+        </rect>
+       </property>
+       <property name="styleSheet">
+        <string notr="true">QRadioButton:enabled{
+font-size: 16px;
+border-radius: 10px;
+padding-left: 10px;
+background-color: black;
+color: white;
+}
+
+QRadioButton::indicator {
+width: 11px;
+height: 11px;
+border-radius: 5px;
+}
+
+QRadioButton::indicator::unchecked{ 
+border: 1px solid; 
+border-color: rgb(132,132,132);
+border-radius: 6px;
+background-color: white; 
+width: 11px; 
+height: 11px; 
+}
+
+QRadioButton::indicator::checked{ 
+border: 3px solid; 
+border-color: white;
+border-radius: 6px;
+background-color: red; 
+width: 7px; 
+height: 7px; 
+}
+
+QRadioButton:disabled{
+font-size: 16px;
+border-radius: 10px;
+padding-left: 4px;
+background-color: black;
+color: white;
+}
+
+QRadioButton::indicator:disabled {
+width: 0px;
+height: 0px;
+border-radius: 0px;
+border: 0px;
+}</string>
+       </property>
+       <property name="text">
+        <string>Edit Mode</string>
+       </property>
+       <property name="checkable">
+        <bool>true</bool>
+       </property>
+       <property name="checked">
+        <bool>false</bool>
+       </property>
+      </widget>
      </widget>
      <widget class="QLabel" name="selected_table_label_2">
       <property name="geometry">
@@ -339,11 +430,15 @@ background-color: rgb(0, 0, 0);
       <property name="font">
        <font>
         <family>Trebuchet MS</family>
-        <pointsize>1</pointsize>
+        <pointsize>-1</pointsize>
        </font>
       </property>
+      <property name="layoutDirection">
+       <enum>Qt::LeftToRight</enum>
+      </property>
       <property name="styleSheet">
-       <string notr="true">background-color: rgba(0,0,0,0.7);</string>
+       <string notr="true">background-color: rgba(0,0,0,0.7);
+font-size:19px;</string>
       </property>
       <property name="text">
        <string>Functionality Space</string>
@@ -364,15 +459,16 @@ background-color: rgb(0, 0, 0);
       <property name="styleSheet">
        <string notr="true">QPushButton{
 border-radius: 10;
-color: green;
+color: red;
+font-size:19px;
 }
 
 QPushButton:hover
 {
-color: white;
+color: black;
 border-radius:13px;
-background: red;
-font-size:21px;
+background: rgb(220, 50, 50);
+font-size:20px;
 }</string>
       </property>
       <property name="text">
