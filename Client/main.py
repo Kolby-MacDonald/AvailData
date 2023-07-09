@@ -7,11 +7,11 @@ import hashlib
 import webbrowser
 import pandas as pd
 from OpenSSL import crypto
+from PyQt5.QtCore import Qt
 from PyQt5 import QtWidgets
 from PyQt5.uic import loadUi
 from dotenv import load_dotenv
-from PyQt5.QtWidgets import QDialog, QApplication, QTableWidget, QTableWidgetItem, QAbstractItemView
-from PyQt5.QtCore import Qt
+from PyQt5.QtWidgets import QDialog, QApplication, QTableWidgetItem, QAbstractItemView
 
 
 ################################################## LOG IN CLASS #######################################################
@@ -36,21 +36,37 @@ class LoginPage(QDialog):
         self.password_line_edit.setText("")
 
         if username != "" and password !="":
-            generate_ssl_certificate(str(os.getenv("cert_file")), str(os.getenv("key_file")))  
-            CLIENT = wrap_socket_with_certificates(str(os.getenv("cert_file")), str(os.getenv("key_file")))
-            CLIENT.connect((os.getenv("pub_ip"), int(os.getenv("pub_port"))))
+            try:
+                # WRAP SOCKET IN SSL
+                context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
+                if str(os.getenv("ca_cert_required")) == "True": 
+                    cert_file = str(os.getenv("ca_cert_file"))
+                    key_file =  str(os.getenv("ca_key_file"))
+                    context.load_cert_chain(certfile=cert_file, keyfile=key_file)
+                    CLIENT.connect((os.getenv("pub_ip"), int(os.getenv("pub_port"))))
+                    context.load_verify_locations(str(os.getenv("ca_verify_file")))
+                else:
+                    cert_file = str(os.getenv("gen_cert_file"))
+                    key_file =  str(os.getenv("gen_key_file"))
+                    generate_ssl_certificate(cert_file, key_file)
+                    context.load_cert_chain(certfile=cert_file, keyfile=key_file)
+                    context.verify_mode = ssl.CERT_NONE
+                    CLIENT = context.wrap_socket(CLIENT)
+                    CLIENT.connect((os.getenv("pub_ip"), int(os.getenv("pub_port"))))
 
-            data = ["login", username, enc_password]
-            send_data(data)
+                data = ["login", username, enc_password]
+                send_data(data)
 
-            response = recieve_data()
+                response = recieve_data()
 
-            if response == True:
-                self.open_user_page()
-
-            else:
-                close_socket()
-                print("Failed")
+                if response == True:
+                    self.open_user_page()
+                else:
+                    close_connection()
+                    print("Failed")
+    
+            except: print("Server Refused to Connect")
+            
         else:
             print("Enter your credentials to login.")
 
@@ -110,7 +126,7 @@ class UserPage(QDialog):
             user_table_names = recieve_data()
             self.user_write_table_names = user_table_names[0]
             self.user_read_table_names = user_table_names[1]
-            UserPage.get_init_data(self, user_table_names)
+            UserPage.get_init_data(self)
 
         elif request == "update_loaded_table":
             data = [request, self.table_select_combobox.currentText(), self.result_select_combobox.currentText()]
@@ -122,14 +138,14 @@ class UserPage(QDialog):
             self.loaded_table_edit.clear()
             data = [request]
             send_data(data)
-            close_socket()
+            close_connection()
             user_window = self
-            widget.removeWidget(user_window)
             widget.addWidget(login_window)
+            widget.removeWidget(user_window)
 
     #----------------------------------------------- CLIENT UI FUNCTIONS -------------------------------------------
 
-    def get_init_data(self, user_table_names):
+    def get_init_data(self):
 
         if self.user_write_table_names != [] or self.user_read_table_names != []:
             self.table_select_combobox.addItems(self.user_write_table_names + self.user_read_table_names)
@@ -152,7 +168,6 @@ class UserPage(QDialog):
             self.readwrite_table_control()
 
         if table_data != []:
-            
             table_data = table_data[0]
             df = pd.DataFrame.from_dict(table_data)
             column_titles = list(df.columns.values)
@@ -213,7 +228,7 @@ def recieve_data():
     except:
         pass
 
-def close_socket():
+def close_connection():
     global CLIENT
     CLIENT.shutdown(socket.SHUT_RDWR)
     CLIENT.close()
@@ -231,7 +246,7 @@ def generate_ssl_certificate(cert_file, key_file):
     cert.get_subject().CN = "AvailData"
     cert.set_serial_number(1000)
     cert.gmtime_adj_notBefore(0)
-    cert.gmtime_adj_notAfter(365 * 24 * 60 * 60)  # Valid for 1 year
+    cert.gmtime_adj_notAfter(1 * 24 * 60 * 60) #24 Hours 
     cert.set_issuer(cert.get_subject())
     cert.set_pubkey(key)
     cert.sign(key, "sha256")
@@ -242,20 +257,8 @@ def generate_ssl_certificate(cert_file, key_file):
     
     with open(key_file, "wb") as key_file:
         key_file.write(crypto.dump_privatekey(crypto.FILETYPE_PEM, key))
-    
-    print("Certificate and private key generated successfully.")
 
     return(cert_file, key_file)
-
-def wrap_socket_with_certificates(cert_file, key_file):
-    # Wrap the socket with SSL/TLS
-    context = ssl.create_default_context(ssl.Purpose.SERVER_AUTH)
-    context.load_cert_chain(certfile=cert_file, keyfile=key_file)
-    context.check_hostname = False
-    context.verify_mode = ssl.CERT_NONE
-    ssl_sock = context.wrap_socket(CLIENT)
-
-    return(ssl_sock)
 
 ######################################### MAIN STARTUP SCRIPT #########################################################
 

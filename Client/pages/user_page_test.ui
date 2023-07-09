@@ -97,7 +97,7 @@ color: white;
       <property name="font">
        <font>
         <family>Trebuchet MS</family>
-        <pointsize>-1</pointsize>
+        <pointsize>1</pointsize>
        </font>
       </property>
       <property name="styleSheet">
@@ -144,7 +144,7 @@ font-size:19px;</string>
       <property name="font">
        <font>
         <family>Trebuchet MS</family>
-        <pointsize>-1</pointsize>
+        <pointsize>1</pointsize>
        </font>
       </property>
       <property name="styleSheet">
@@ -171,7 +171,7 @@ background-color: rgba(0,0,0,0.8);</string>
       <property name="font">
        <font>
         <family>Trebuchet MS</family>
-        <pointsize>-1</pointsize>
+        <pointsize>1</pointsize>
        </font>
       </property>
       <property name="styleSheet">
@@ -197,7 +197,7 @@ font-size:19px;</string>
       <property name="font">
        <font>
         <family>Trebuchet MS</family>
-        <pointsize>-1</pointsize>
+        <pointsize>1</pointsize>
        </font>
       </property>
       <property name="autoFillBackground">
@@ -430,7 +430,7 @@ border: 0px;
       <property name="font">
        <font>
         <family>Trebuchet MS</family>
-        <pointsize>-1</pointsize>
+        <pointsize>1</pointsize>
        </font>
       </property>
       <property name="layoutDirection">

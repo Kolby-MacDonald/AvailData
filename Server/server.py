@@ -10,23 +10,36 @@ from dotenv import load_dotenv
 
 
 # Primary function controller.
-def server_controller(server):
+def server_controller(server, conn_ip, firewall_mode):
 
-    credentials = recieve_data(server, None, None, None, None)
-    
     db = mysql.connector.connect(
         host=os.getenv("db_host"), 
         user=os.getenv("db_user"), 
         password=os.getenv("db_pass"),
         database=os.getenv("db_name")
         )
-    
     cursor = db.cursor()
+    
+    #FIREWALL: TEST CONNECTION IF ENABLED
+    if str(os.getenv("firewall_enabled")) == "True" and str(os.getenv("firewall_enabled")):
+        cursor.execute(
+            f'''SELECT * FROM {os.getenv("db_firewall_name")} WHERE %s = %s''', 
+            ((str(os.getenv("firewall_mode")).lower(),conn_ip)))
+        
+        try:
+            ip_result = cursor.fetchone()
+            ip_result = ip_result[0]
+        except: pass
 
-    print(f"{str(credentials[1])} is attempting access to the database.")
+        if firewall_mode == "blacklist" and ip_result:
+            close_connection(server)
+        elif firewall_mode == "whitelist" and ip_result == False:
+            close_connection(server)
+    
+    credentials = recieve_data(server, None, None, None, None)
 
     cursor.execute(
-        f'''SELECT * FROM {os.getenv("db_table_name")} where username = %s and password = %s''',
+        f'''SELECT * FROM {os.getenv("db_table_name")} WHERE username = %s AND password = %s''',
         (str(credentials[1]), str(credentials[2]))
         )
     
@@ -37,23 +50,19 @@ def server_controller(server):
         job_title = results[2] 
         db_role = results[3]
         username = results[4]
-        #password = results[5]
-        #email = results[6]
         user_write_table_access = results[7]
         user_read_table_access = results[8]
-    except:
-        pass
+    except: pass
 
     if results:
-        data = True
-        send_data(server, data)
-        #server.sendall("True".encode())
+        send_data(server, True)
         print(f" {user_db_id} | {employee_name}:{username} | {job_title}:{db_role} | has accessed the database.")
         recieve_data(server, cursor, db_role, user_write_table_access, user_read_table_access)
     
     else:
         server.sendall("False".encode())
-        print("Credentials do not exist.")
+        print(f"{conn_ip} Failed To Connect | Username Given: {str(credentials[1])}")
+        close_connection(server)
 
 ######################################## SERVER RESPONSE FUNCTIONS ###################################################
 
@@ -64,7 +73,6 @@ def send_data(server, data):
     server.sendall(header + json_data.encode('utf-8'))
 
 def recieve_data(server, cursor, db_role, user_write_table_access, user_read_table_access):
-    print("In Recieve Data")
     while True:
         try:
             header = server.recv(15)
@@ -90,9 +98,8 @@ def recieve_data(server, cursor, db_role, user_write_table_access, user_read_tab
                 update_loaded_table(server, cursor, user_write_table_names, user_read_table_names, requested_table, result_select)
 
             elif request_type == "log_out":
-                server_controller(server)
-        except:
-            pass
+                close_connection(server)
+        except: pass
 
 
 ######################################## DATA MANIPULATION FUNCTIONS ###################################################
@@ -100,9 +107,6 @@ def recieve_data(server, cursor, db_role, user_write_table_access, user_read_tab
 def init_data_response(server, cursor, db_role, user_write_table_access, user_read_table_access):
     cursor.execute(f'''SHOW TABLES''')
     database_table_names_curse = cursor.fetchall()
-
-    #print(cursor.execute(f'''SHOW TABLES''').fetchone())
-
 
     database_table_names = []
     user_write_table_names = []
@@ -120,7 +124,7 @@ def init_data_response(server, cursor, db_role, user_write_table_access, user_re
         apparent_table_names = user_write_table_access.split(', ')
         for table_name in apparent_table_names:
             if table_name in database_table_names and table_name not in user_write_table_names:
-                user_write_table_names.append(table_name)
+                user_write_table_names.append(str(table_name))
 
     #Read Control---------------------------------------------------------------------------
     
@@ -131,7 +135,7 @@ def init_data_response(server, cursor, db_role, user_write_table_access, user_re
         apparent_table_names = user_read_table_access.split(', ')
         for table_name in apparent_table_names:
             if table_name in database_table_names and table_name not in user_read_table_names and table_name not in user_write_table_names:
-                user_read_table_names.append(table_name)
+                user_read_table_names.append(str(table_name))
 
     data = [user_write_table_names, user_read_table_names]
     send_data(server,data)
@@ -182,35 +186,51 @@ def generate_ssl_certificate(cert_file, key_file):
     with open(key_file, "wb") as key_file:
         key_file.write(crypto.dump_privatekey(crypto.FILETYPE_PEM, key))
     
-    print("Certificate and private key generated successfully.")
-
     return(cert_file, key_file)
 
-
+def close_connection(server):
+    server.shutdown(socket.SHUT_RDWR)
+    server.close()
 
 ######################################## START-UP SCRIPT ###################################################
 
 def main():
 
     load_dotenv()
-    cert_file = str(os.getenv("cert_file"))
-    key_file =  str(os.getenv("key_file"))
 
-    generate_ssl_certificate(cert_file, key_file)
-
+    # WRAP SOCKET IN SSL
     context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
-    context.load_cert_chain(certfile=cert_file, keyfile=key_file)
-    context.verify_mode = ssl.CERT_NONE
+    if str(os.getenv("ca_cert_required")) == "True":
+        cert_file = str(os.getenv("ca_cert_file"))
+        key_file =  str(os.getenv("ca_key_file"))
+        context.load_cert_chain(certfile=cert_file, keyfile=key_file)
+        context.load_verify_locations(str(os.getenv("ca_verify_file")))
+    else:
+        cert_file = str(os.getenv("gen_cert_file"))
+        key_file =  str(os.getenv("gen_key_file"))
+        generate_ssl_certificate(cert_file, key_file)
+        context.load_cert_chain(certfile=cert_file, keyfile=key_file)
+        context.verify_mode = ssl.CERT_NONE
+
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server_socket.bind((os.getenv("pub_Ip"), int(os.getenv("pub_port"))))
     ssl_server_socket = context.wrap_socket(server_socket, server_side=True)
     ssl_server_socket.listen()
 
+    # GAURENTEE FIREWALL IS SET PROPERLY
     print("Server Online.")
+    firewall_mode = str(os.getenv("firewall_mode")).lower()
+    if firewall_mode not in ["whitelist", "blacklist"]:
+        print('Firewall Enabled With No Mode... Setting to "blacklist" Mode')
+        firewall_mode = "blacklist"
+    print(f"Firewall Enabled | Mode: {firewall_mode}")
+
+    global COUNTTHREADS
+    COUNTTHREADS = 0
 
     while True:
         server, addr = ssl_server_socket.accept()
         print(f"incoming connection by: {addr}")
-        threading.Thread(target=server_controller, args=(server,)).start()
-
+        threading.Thread(target=server_controller, args=(server,addr[0],firewall_mode,)).start()
+        
 main()
