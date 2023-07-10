@@ -8,9 +8,12 @@ import mysql.connector
 from OpenSSL import crypto
 from dotenv import load_dotenv
 
+ACTIVE_THREADS = {}
+TOTAL_CONNECTIONS = 0
 
 # Primary function controller.
-def server_controller(server, conn_ip, firewall_mode):
+def server_controller(client_sock, conn_ip, conn_num, firewall_mode, thread_id, terminate_event):
+
 
     db = mysql.connector.connect(
         host=os.getenv("db_host"), 
@@ -31,12 +34,10 @@ def server_controller(server, conn_ip, firewall_mode):
             ip_result = ip_result[0]
         except: pass
 
-        if firewall_mode == "blacklist" and ip_result:
-            close_connection(server)
-        elif firewall_mode == "whitelist" and ip_result == False:
-            close_connection(server)
+        if (firewall_mode == "blacklist" and ip_result) or (firewall_mode == "whitelist" and ip_result == False):
+            close_connection(client_sock, conn_num, thread_id)
     
-    credentials = recieve_data(server, None, None, None, None)
+    credentials = receive_data(client_sock, conn_num, thread_id, None, None, None, None)
 
     cursor.execute(
         f'''SELECT * FROM {os.getenv("db_table_name")} WHERE username = %s AND password = %s''',
@@ -55,32 +56,33 @@ def server_controller(server, conn_ip, firewall_mode):
     except: pass
 
     if results:
-        send_data(server, True)
-        print(f" {user_db_id} | {employee_name}:{username} | {job_title}:{db_role} | has accessed the database.")
-        recieve_data(server, cursor, db_role, user_write_table_access, user_read_table_access)
+        send_data(client_sock, True)
+        print(f"{user_db_id} | {employee_name}:{username} | {job_title}:{db_role} | has accessed the database.")
+        receive_data(client_sock, conn_num, thread_id, cursor, db_role, user_write_table_access, user_read_table_access)
     
     else:
-        server.sendall("False".encode())
+        client_sock.sendall("False".encode())
         print(f"{conn_ip} Failed To Connect | Username Given: {str(credentials[1])}")
-        close_connection(server)
+        db.close()
+        close_connection(client_sock, conn_num, thread_id)
 
 ######################################## SERVER RESPONSE FUNCTIONS ###################################################
 
-def send_data(server, data):
+def send_data(client_sock, data):
     json_data = json.dumps(data)
     data_length = len(json_data)
     header = f"{data_length:<{15}}".encode('utf-8')
-    server.sendall(header + json_data.encode('utf-8'))
+    client_sock.sendall(header + json_data.encode('utf-8'))
 
-def recieve_data(server, cursor, db_role, user_write_table_access, user_read_table_access):
+def receive_data(client_sock, conn_num, thread_id, cursor, db_role, user_write_table_access, user_read_table_access):
     while True:
         try:
-            header = server.recv(15)
+            header = client_sock.recv(15)
             if not header:
                 break
 
             data_length = int(header.strip())
-            data = server.recv(data_length).decode('utf-8')
+            data = client_sock.recv(data_length).decode('utf-8')
             json_data = json.loads(data)
             request_type = json_data[0]
 
@@ -88,23 +90,23 @@ def recieve_data(server, cursor, db_role, user_write_table_access, user_read_tab
                 return(json_data)
             
             elif request_type == "get_init_data":
-                user_table_names = init_data_response(server, cursor, db_role, user_write_table_access, user_read_table_access)
+                user_table_names = init_data_response(client_sock, cursor, db_role, user_write_table_access, user_read_table_access)
                 user_write_table_names = user_table_names[0]
                 user_read_table_names = user_table_names[1]
             
             elif request_type == "update_loaded_table":
                 requested_table = json_data[1]
                 result_select = int(json_data[2])
-                update_loaded_table(server, cursor, user_write_table_names, user_read_table_names, requested_table, result_select)
+                update_loaded_table(client_sock, cursor, user_write_table_names, user_read_table_names, requested_table, result_select)
 
             elif request_type == "log_out":
-                close_connection(server)
+                close_connection(client_sock, conn_num,thread_id)
         except: pass
 
 
 ######################################## DATA MANIPULATION FUNCTIONS ###################################################
 
-def init_data_response(server, cursor, db_role, user_write_table_access, user_read_table_access):
+def init_data_response(client_sock, cursor, db_role, user_write_table_access, user_read_table_access):
     cursor.execute(f'''SHOW TABLES''')
     database_table_names_curse = cursor.fetchall()
 
@@ -138,11 +140,11 @@ def init_data_response(server, cursor, db_role, user_write_table_access, user_re
                 user_read_table_names.append(str(table_name))
 
     data = [user_write_table_names, user_read_table_names]
-    send_data(server,data)
+    send_data(client_sock,data)
 
     return(user_write_table_names, user_read_table_names)
 
-def update_loaded_table(server, cursor, user_write_table_names, user_read_table_names, requested_table, result_select):
+def update_loaded_table(client_sock, cursor, user_write_table_names, user_read_table_names, requested_table, result_select):
 
     df_column_attributes = []
     column_names = []
@@ -161,7 +163,7 @@ def update_loaded_table(server, cursor, user_write_table_names, user_read_table_
         df = df.to_dict()
 
     data = [df]
-    send_data(server, data)
+    send_data(client_sock, data)
 
 ######################################## SOCKET SECURITY LAYER #######################################################
 def generate_ssl_certificate(cert_file, key_file):
@@ -188,15 +190,24 @@ def generate_ssl_certificate(cert_file, key_file):
     
     return(cert_file, key_file)
 
-def close_connection(server):
-    server.shutdown(socket.SHUT_RDWR)
-    server.close()
+def close_connection(client_sock, conn_num, thread_id):
+    global ACTIVE_THREADS
+    client_sock.shutdown(socket.SHUT_RDWR)
+    client_sock.close()
+
+    #To terminate a specific thread:
+    terminate_event = threading.Event()
+    print(f"Closing Connection: {conn_num}")
+    terminate_event = ACTIVE_THREADS[thread_id]["event"]
+    del ACTIVE_THREADS[thread_id]
+    terminate_event.set()
 
 ######################################## START-UP SCRIPT ###################################################
 
 def main():
-
+    global TOTAL_CONNECTIONS
     load_dotenv()
+
 
     # WRAP SOCKET IN SSL
     context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
@@ -225,12 +236,19 @@ def main():
         firewall_mode = "blacklist"
     print(f"Firewall Enabled | Mode: {firewall_mode}")
 
-    global COUNTTHREADS
-    COUNTTHREADS = 0
-
     while True:
-        server, addr = ssl_server_socket.accept()
+        client_sock, addr = ssl_server_socket.accept()
         print(f"incoming connection by: {addr}")
-        threading.Thread(target=server_controller, args=(server,addr[0],firewall_mode,)).start()
-        
-main()
+
+        thread_id = len(ACTIVE_THREADS) + 1
+        terminate_event = threading.Event()
+
+        TOTAL_CONNECTIONS += 1
+        conn_num = TOTAL_CONNECTIONS
+        thread = threading.Thread(target=server_controller, args=(client_sock, addr[0], conn_num, firewall_mode, thread_id, terminate_event,))
+        ACTIVE_THREADS[thread_id] = {"thread": thread, "event": terminate_event}
+        thread.start()
+        print(f'''Active Clients ({len(ACTIVE_THREADS)}) | Closed Clients ({TOTAL_CONNECTIONS - len(ACTIVE_THREADS)}) | Total: ({TOTAL_CONNECTIONS}).''')
+
+if __name__ == "__main__":
+    main()

@@ -26,8 +26,6 @@ class LoginPage(QDialog):
         self.linkedin_button.clicked.connect(self.open_linkedin)
 
     def login_function(self):
-        global CLIENT
-        CLIENT = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         username = str(self.username_line_edit.text())
         password = str(self.password_line_edit.text())
         enc_password = hashlib.sha256(password.encode()).hexdigest()
@@ -36,6 +34,8 @@ class LoginPage(QDialog):
         self.password_line_edit.setText("")
 
         if username != "" and password !="":
+            global CLIENT
+            CLIENT = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             try:
                 # WRAP SOCKET IN SSL
                 context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
@@ -79,8 +79,8 @@ class LoginPage(QDialog):
 
     def open_user_page(self):
         user_window = UserPage()
-        widget.removeWidget(login_window)
         widget.addWidget(user_window)
+        widget.removeWidget(login_window)
 
 ################################################## SIGN UP CLASS ######################################################
 
@@ -99,8 +99,8 @@ class SignUpPage(QDialog):
         print(f"username = {username} | email = {email} | password = {password} | confirm_password = {confirm_password}")
     
     def open_login_page(self):
-        widget.removeWidget(signup_window)
         widget.addWidget(login_window)
+        widget.removeWidget(signup_window)
 
 ##################################################### USER'S MAIN PAGE ################################################
 
@@ -136,8 +136,6 @@ class UserPage(QDialog):
         
         elif request == "log_out":
             self.loaded_table_edit.clear()
-            data = [request]
-            send_data(data)
             close_connection()
             user_window = self
             widget.addWidget(login_window)
@@ -230,9 +228,13 @@ def recieve_data():
 
 def close_connection():
     global CLIENT
+    data = ["log_out"]
+    send_data(data)
     CLIENT.shutdown(socket.SHUT_RDWR)
     CLIENT.close()
-    CLIENT = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    CLIENT = None
+    
+    #CLIENT = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
 ######################################### SECURE SOCKET LAYER ########################################################
 
