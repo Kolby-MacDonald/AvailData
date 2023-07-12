@@ -5,19 +5,79 @@ import socket
 import threading
 import pandas as pd
 import mysql.connector
-from random import sample
 from OpenSSL import crypto
 from dotenv import load_dotenv
 
+from cryptography.hazmat.primitives.asymmetric import rsa
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.asymmetric import padding
 
 ACTIVE_THREADS = {}
 TOTAL_CONNECTIONS = 0
 LOCK = threading.Lock()
 
 
+def generate_key_pair():
+    private_key = rsa.generate_private_key(
+        public_exponent=65537,
+        key_size=2048
+    )
+    public_key = private_key.public_key()
+
+    private_pem = private_key.private_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PrivateFormat.PKCS8,
+        encryption_algorithm=serialization.NoEncryption()
+    )
+    public_pem = public_key.public_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PublicFormat.SubjectPublicKeyInfo
+    )
+
+    return private_pem, public_pem
+
+
+def encrypt_message(public_key, message):
+    print(f"Data made it to encryption {message}")
+    public_key = serialization.load_pem_public_key(public_key)
+    print("loaded public key")
+    encrypted = public_key.encrypt(
+        message,
+        padding.OAEP(
+            mgf=padding.MGF1(algorithm=hashes.SHA256()),
+            algorithm=hashes.SHA256(),
+            label=None
+        )
+    )
+    print("Data is leaving encryption")
+    return encrypted
+
+
+def decrypt_message(private_key, encrypted_message):
+    private_key = serialization.load_pem_private_key(private_key, password=None)
+    decrypted = private_key.decrypt(
+        encrypted_message,
+        padding.OAEP(
+            mgf=padding.MGF1(algorithm=hashes.SHA256()),
+            algorithm=hashes.SHA256(),
+            label=None
+        )
+    )
+    print(f"Decrypted : {decrypted}")
+    return decrypted
+
 
 # Primary function controller.
 def server_controller(client_sock, conn_ip, conn_num, firewall_mode, thread_id):
+
+    server_private_key, server_public_key = generate_key_pair()
+    client_public_key = client_sock.recv(4096)
+    print(f"Server Key: {server_private_key}")
+    print(f"Key Recieved {client_public_key}")
+    client_sock.sendall(server_public_key)
+    print("Movin on")
+
     db = mysql.connector.connect(
         host=os.getenv("db_host"),
         user=os.getenv("db_user"),
@@ -25,7 +85,7 @@ def server_controller(client_sock, conn_ip, conn_num, firewall_mode, thread_id):
         database=os.getenv("db_name")
     )
     cursor = db.cursor()
-
+    print("db connected")
 
     # FIREWALL: TEST CONNECTION IF ENABLED
     if str(os.getenv("firewall_enabled")) == "True" and str(os.getenv("firewall_enabled")):
@@ -42,7 +102,8 @@ def server_controller(client_sock, conn_ip, conn_num, firewall_mode, thread_id):
         if (firewall_mode == "blacklist" and ip_result) or (firewall_mode == "whitelist" and ip_result == False):
             close_connection(client_sock, conn_num, thread_id, db)
 
-    credentials = receive_data(client_sock, conn_num, thread_id, None, None, None, None, None)
+    credentials = receive_data(client_sock, conn_num, thread_id, None, None, None, None, None, server_private_key, client_public_key)
+    print(f"credentials received {credentials}")
 
     cursor.execute(
         f'''SELECT * FROM {os.getenv("db_table_name")} WHERE username = %s AND password = %s''',
@@ -62,26 +123,32 @@ def server_controller(client_sock, conn_ip, conn_num, firewall_mode, thread_id):
         pass
 
     if results:
-        send_data(client_sock, True)
+        send_data(client_sock, True, client_public_key)
         print(f"{user_db_id} | {employee_name}:{username} | {job_title}:{db_role} | has accessed the database.")
-        receive_data(client_sock, conn_num, thread_id, db, cursor, db_role, user_write_table_access, user_read_table_access)
-
+        receive_data(client_sock, conn_num, thread_id, db, cursor, db_role, user_write_table_access,
+                     user_read_table_access, server_private_key, client_public_key)
     else:
-        client_sock.sendall("False".encode())
+        client_sock.sendall(client_sock, False, client_public_key)
         print(f"{conn_ip} Failed To Connect | Username Given: {str(credentials[1])}")
         close_connection(client_sock, conn_num, thread_id, db)
 
 
 ######################################## SERVER RESPONSE FUNCTIONS ###################################################
 
-def send_data(client_sock, data):
+def send_data(client_sock, data, public_key):
+    
     json_data = json.dumps(data)
-    data_length = len(json_data)
+
+    print(f"################### {json_data}")
+    encrypted_data = encrypt_message(public_key, json_data.encode('utf-8'))
+    
+    data_length = len(encrypted_data)
     header = f"{data_length:<{15}}".encode('utf-8')
-    client_sock.sendall(header + json_data.encode('utf-8'))
+    client_sock.sendall(header + encrypted_data)
 
 
-def receive_data(client_sock, conn_num, thread_id, db, cursor, db_role, user_write_table_access, user_read_table_access):
+def receive_data(client_sock, conn_num, thread_id, db, cursor, db_role, user_write_table_access, user_read_table_access,
+                 server_private_key, client_public_key):
     while True:
         try:
             header = client_sock.recv(15)
@@ -89,24 +156,32 @@ def receive_data(client_sock, conn_num, thread_id, db, cursor, db_role, user_wri
                 break
 
             data_length = int(header.strip())
-            data = client_sock.recv(data_length).decode('utf-8')
-            json_data = json.loads(data)
+            data = client_sock.recv(data_length)
+
+            if server_private_key is not None:
+                decrypted_data = decrypt_message(server_private_key, data)
+                json_data = decrypted_data.decode('utf-8')
+            else:
+                json_data = data.decode('utf-8')
+
+            json_data = json.loads(json_data)
             request_type = json_data[0]
 
             if request_type == "login":
                 return json_data
 
             elif request_type == "get_init_data":
-                user_table_names = init_data_response(client_sock, cursor, db_role, user_write_table_access,
+                user_table_names = init_data_response(client_sock, client_public_key, cursor, db_role, user_write_table_access,
                                                      user_read_table_access)
                 user_write_table_names = user_table_names[0]
                 user_read_table_names = user_table_names[1]
 
             elif request_type == "update_loaded_table":
+                print(f"Request {request_type} recieved.")
                 requested_table = json_data[1]
                 result_select = int(json_data[2])
                 update_loaded_table(client_sock, cursor, user_write_table_names, user_read_table_names, requested_table,
-                                    result_select)
+                                    result_select, client_public_key)
 
             elif request_type == "log_out":
                 close_connection(client_sock, conn_num, thread_id, db)
@@ -116,7 +191,7 @@ def receive_data(client_sock, conn_num, thread_id, db, cursor, db_role, user_wri
 
 ######################################## DATA MANIPULATION FUNCTIONS ###################################################
 
-def init_data_response(client_sock, cursor, db_role, user_write_table_access, user_read_table_access):
+def init_data_response(client_sock, client_public_key, cursor, db_role, user_write_table_access, user_read_table_access):
     cursor.execute(f'''SHOW TABLES''')
     database_table_names_curse = cursor.fetchall()
 
@@ -150,13 +225,13 @@ def init_data_response(client_sock, cursor, db_role, user_write_table_access, us
                 user_read_table_names.append(str(table_name))
 
     data = [user_write_table_names, user_read_table_names]
-    send_data(client_sock, data)
+    send_data(client_sock, data, client_public_key)
 
     return user_write_table_names, user_read_table_names
 
 
-def update_loaded_table(client_sock, cursor, user_write_table_names, user_read_table_names, requested_table,
-                        result_select):
+def update_loaded_table(client_sock, cursor, user_write_table_names, user_read_table_names, requested_table, result_select, client_public_key):
+    print("In update loaded table.")
     df_column_attributes = []
     column_names = []
     df = pd.DataFrame()
@@ -174,7 +249,7 @@ def update_loaded_table(client_sock, cursor, user_write_table_names, user_read_t
         df = df.to_dict()
 
     data = [df]
-    send_data(client_sock, data)
+    send_data(client_sock, data, client_public_key)
 
 
 ######################################## SOCKET SECURITY LAYER #######################################################
@@ -224,7 +299,6 @@ def close_connection(client_sock, conn_num, thread_id, db):
             print(f"Thread {thread_id} does not exist.")
 
     print(f"Connection {conn_num} closed.")
-
 
 
 ######################################## START-UP SCRIPT ###################################################
