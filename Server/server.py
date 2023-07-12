@@ -5,14 +5,19 @@ import socket
 import threading
 import pandas as pd
 import mysql.connector
+from random import sample
 from OpenSSL import crypto
 from dotenv import load_dotenv
 
+
 ACTIVE_THREADS = {}
 TOTAL_CONNECTIONS = 0
+LOCK = threading.Lock()
+
+
 
 # Primary function controller.
-def server_controller(client_sock, conn_ip, conn_num, firewall_mode, thread_id, terminate_event):
+def server_controller(client_sock, conn_ip, conn_num, firewall_mode, thread_id):
     db = mysql.connector.connect(
         host=os.getenv("db_host"),
         user=os.getenv("db_user"),
@@ -20,6 +25,7 @@ def server_controller(client_sock, conn_ip, conn_num, firewall_mode, thread_id, 
         database=os.getenv("db_name")
     )
     cursor = db.cursor()
+
 
     # FIREWALL: TEST CONNECTION IF ENABLED
     if str(os.getenv("firewall_enabled")) == "True" and str(os.getenv("firewall_enabled")):
@@ -199,23 +205,25 @@ def generate_ssl_certificate(cert_file, key_file):
 
 
 def close_connection(client_sock, conn_num, thread_id, db):
-    global ACTIVE_THREADS
-    client_sock.shutdown(socket.SHUT_RDWR)
-    client_sock.close()
+    try:
+        client_sock.shutdown(socket.SHUT_RDWR)
+        client_sock.close()
+        db.close()
+    except socket.error:
+        pass
 
-    db.close()
+    with LOCK:
+        thread = ACTIVE_THREADS.get(thread_id)
+        if thread:
+            del ACTIVE_THREADS[thread_id]
+            print(f"Closing Connection: ({conn_num}) | Current Thread ({thread_id})")
+            if thread["thread"] != threading.current_thread():  # Skip joining the current thread
+                thread["event"].set()
+                thread["thread"].join()
+        else:
+            print(f"Thread {thread_id} does not exist.")
 
-    thread = ACTIVE_THREADS.get(thread_id)
-    if thread:
-        del ACTIVE_THREADS[thread_id]
-        print(f"Closing Connection: ({conn_num}) | Current Thread ({thread_id})")
-        if thread["thread"] != threading.current_thread():  # Skip joining the current thread
-            thread["event"].set()
-            thread["thread"].join()
-    else:
-        print(f"Thread {thread_id} does not exist.")
-
-    print(f"ERROR: THREAD {conn_num} FAILED TO EXIT")
+    print(f"Connection {conn_num} closed.")
 
 
 
@@ -262,7 +270,7 @@ def main():
         TOTAL_CONNECTIONS += 1
         conn_num = TOTAL_CONNECTIONS
         thread = threading.Thread(target=server_controller,
-                                  args=(client_sock, addr[0], conn_num, firewall_mode, thread_id, terminate_event,))
+                                  args=(client_sock, addr[0], conn_num, firewall_mode, thread_id,))
         ACTIVE_THREADS[thread_id] = {"thread": thread, "event": terminate_event}
         thread.start()
         print(
