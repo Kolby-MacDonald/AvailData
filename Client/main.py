@@ -12,58 +12,7 @@ from PyQt5 import QtWidgets
 from PyQt5.uic import loadUi
 from dotenv import load_dotenv
 from PyQt5.QtWidgets import QDialog, QApplication, QTableWidgetItem, QAbstractItemView
-from cryptography.hazmat.primitives.asymmetric import rsa
-from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.asymmetric import padding
 
-# Global variables for server public key and client private key
-server_public_key = None
-client_private_key = None
-
-def generate_key_pair():
-    private_key = rsa.generate_private_key(
-        public_exponent=65537,
-        key_size=2048
-    )
-    public_key = private_key.public_key()
-
-    private_pem = private_key.private_bytes(
-        encoding=serialization.Encoding.PEM,
-        format=serialization.PrivateFormat.PKCS8,
-        encryption_algorithm=serialization.NoEncryption()
-    )
-    public_pem = public_key.public_bytes(
-        encoding=serialization.Encoding.PEM,
-        format=serialization.PublicFormat.SubjectPublicKeyInfo
-    )
-
-    return private_pem, public_pem
-
-def encrypt_message(public_key, message):
-    public_key = serialization.load_pem_public_key(public_key)
-    encrypted = public_key.encrypt(
-        message,
-        padding.OAEP(
-            mgf=padding.MGF1(algorithm=hashes.SHA256()),
-            algorithm=hashes.SHA256(),
-            label=None
-        )
-    )
-    return encrypted
-
-def decrypt_message(private_key, encrypted_message):
-    private_key = serialization.load_pem_private_key(private_key, password=None)
-    decrypted = private_key.decrypt(
-        encrypted_message,
-        padding.OAEP(
-            mgf=padding.MGF1(algorithm=hashes.SHA256()),
-            algorithm=hashes.SHA256(),
-            label=None
-        )
-    )
-    print(f"Decrypted : {decrypted}")
-    return decrypted
 
 ################################################## LOG IN CLASS #######################################################
 
@@ -105,16 +54,10 @@ class LoginPage(QDialog):
                     CLIENT = context.wrap_socket(CLIENT)
                     CLIENT.connect((os.getenv("pub_ip"), int(os.getenv("pub_port"))))
 
-                global client_private_key, server_public_key
-                client_private_key, client_public_key = generate_key_pair()
-
-                CLIENT.sendall(client_public_key)
-                server_public_key = CLIENT.recv(4096)
-
                 data = ["login", username, enc_password]
                 send_data(data)
 
-                response = receive_data()
+                response = recieve_data()
 
                 if response == True:
                     self.open_user_page()
@@ -122,7 +65,7 @@ class LoginPage(QDialog):
                     close_connection()
                     print("Failed")
     
-            except Exception as err: print(f"Server Refused to Connect {err}")
+            except: print("Server Refused to Connect")
             
         else:
             print("Enter your credentials to login.")
@@ -180,7 +123,7 @@ class UserPage(QDialog):
         if request == "get_init_data":
             data = [request]
             send_data(data)
-            user_table_names = receive_data()
+            user_table_names = recieve_data()
             self.user_write_table_names = user_table_names[0]
             self.user_read_table_names = user_table_names[1]
             UserPage.get_init_data(self)
@@ -188,8 +131,7 @@ class UserPage(QDialog):
         elif request == "update_loaded_table":
             data = [request, self.table_select_combobox.currentText(), self.result_select_combobox.currentText()]
             send_data(data)
-            table_data = receive_data()
-            print(f"Data in request handler: {table_data}")
+            table_data = recieve_data()
             UserPage.update_table_view(self, table_data)
         
         elif request == "log_out":
@@ -200,9 +142,11 @@ class UserPage(QDialog):
             widget.removeWidget(user_window)
 
     #----------------------------------------------- CLIENT UI FUNCTIONS -------------------------------------------
+
     def get_init_data(self):
 
         if self.user_write_table_names != [] or self.user_read_table_names != []:
+            print(self.user_write_table_names + self.user_read_table_names)
             self.table_select_combobox.addItems(self.user_write_table_names + self.user_read_table_names)
         else:
             self.readwrite_radioButton.setChecked(False)
@@ -221,8 +165,6 @@ class UserPage(QDialog):
             self.readwrite_radioButton.setText("Edit Mode")
             self.readwrite_radioButton.setEnabled(True)
             self.readwrite_table_control()
-
-        print(table_data)
 
         if table_data != []:
             table_data = table_data[0]
@@ -267,32 +209,23 @@ class UserPage(QDialog):
 ######################################### SEND AND RECIEVE BUFFERED DATA ########################################
 
 def send_data(data):
-    global server_public_key
     json_data = json.dumps(data)
-    encrypted_data = encrypt_message(server_public_key, json_data.encode('utf-8'))
-    data_length = len(encrypted_data)
+    data_length = len(json_data)
     header = f"{data_length:<{15}}".encode('utf-8')
+    CLIENT.sendall(header + json_data.encode('utf-8'))
 
-    CLIENT.sendall(header + encrypted_data)
-
-def receive_data():
-    global client_private_key
-    print("In receive_data")
+def recieve_data():
     try:
         header = CLIENT.recv(15)
         if not header:
             return None
 
         data_length = int(header.strip())
-        encrypted_data = CLIENT.recv(data_length)
-        print(f"encrypted_data = {encrypted_data}")
-        json_data = decrypt_message(client_private_key, encrypted_data)
-        decoded_data = json_data.decode('utf-8')
-        json_data = json.loads(decoded_data)
-        print(f"returning: {json_data}")
-        return json_data
-    except Exception as err_msg:
-        print(f"ERROR IN RECV DATA: {err_msg}")
+        data = CLIENT.recv(data_length).decode('utf-8')
+        json_data = json.loads(data)
+        return(json_data)
+    except:
+        pass
 
 def close_connection():
     global CLIENT

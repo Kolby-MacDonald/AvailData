@@ -4,109 +4,25 @@ import json
 import socket
 import threading
 import pandas as pd
-import mysql.connector
+import sqlite3
 from OpenSSL import crypto
 from dotenv import load_dotenv
-
-from cryptography.hazmat.primitives.asymmetric import rsa
-from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.asymmetric import padding
 
 ACTIVE_THREADS = {}
 TOTAL_CONNECTIONS = 0
 LOCK = threading.Lock()
 
-
-def generate_key_pair():
-    private_key = rsa.generate_private_key(
-        public_exponent=65537,
-        key_size=2048
-    )
-    public_key = private_key.public_key()
-
-    private_pem = private_key.private_bytes(
-        encoding=serialization.Encoding.PEM,
-        format=serialization.PrivateFormat.PKCS8,
-        encryption_algorithm=serialization.NoEncryption()
-    )
-    public_pem = public_key.public_bytes(
-        encoding=serialization.Encoding.PEM,
-        format=serialization.PublicFormat.SubjectPublicKeyInfo
-    )
-
-    return private_pem, public_pem
-
-
-def encrypt_message(public_key, message):
-    print(f"Data made it to encryption {message}")
-    public_key = serialization.load_pem_public_key(public_key)
-    print("loaded public key")
-    encrypted = public_key.encrypt(
-        message,
-        padding.OAEP(
-            mgf=padding.MGF1(algorithm=hashes.SHA256()),
-            algorithm=hashes.SHA256(),
-            label=None
-        )
-    )
-    print("Data is leaving encryption")
-    return encrypted
-
-
-def decrypt_message(private_key, encrypted_message):
-    private_key = serialization.load_pem_private_key(private_key, password=None)
-    decrypted = private_key.decrypt(
-        encrypted_message,
-        padding.OAEP(
-            mgf=padding.MGF1(algorithm=hashes.SHA256()),
-            algorithm=hashes.SHA256(),
-            label=None
-        )
-    )
-    print(f"Decrypted : {decrypted}")
-    return decrypted
-
-
 # Primary function controller.
-def server_controller(client_sock, conn_ip, conn_num, firewall_mode, thread_id):
-
-    server_private_key, server_public_key = generate_key_pair()
-    client_public_key = client_sock.recv(4096)
-    print(f"Server Key: {server_private_key}")
-    print(f"Key Recieved {client_public_key}")
-    client_sock.sendall(server_public_key)
-    print("Movin on")
-
-    db = mysql.connector.connect(
-        host=os.getenv("db_host"),
-        user=os.getenv("db_user"),
-        password=os.getenv("db_pass"),
-        database=os.getenv("db_name")
-    )
+def server_controller(client_sock, conn_ip, conn_num, thread_id):
+    db = sqlite3.connect(f"database_container/{os.getenv('db_name')}")
     cursor = db.cursor()
-    print("db connected")
 
-    # FIREWALL: TEST CONNECTION IF ENABLED
-    if str(os.getenv("firewall_enabled")) == "True" and str(os.getenv("firewall_enabled")):
-        cursor.execute(
-            f'''SELECT * FROM {os.getenv("db_firewall_name")} WHERE %s = %s''',
-            ((str(os.getenv("firewall_mode")).lower(), conn_ip)))
+    credentials = receive_data(client_sock, conn_num, thread_id, None, None, None, None, None)
 
-        try:
-            ip_result = cursor.fetchone()
-            ip_result = ip_result[0]
-        except:
-            pass
-
-        if (firewall_mode == "blacklist" and ip_result) or (firewall_mode == "whitelist" and ip_result == False):
-            close_connection(client_sock, conn_num, thread_id, db)
-
-    credentials = receive_data(client_sock, conn_num, thread_id, None, None, None, None, None, server_private_key, client_public_key)
-    print(f"credentials received {credentials}")
+    print("UPDATE: RECEIVED CREDENTIALS")
 
     cursor.execute(
-        f'''SELECT * FROM {os.getenv("db_table_name")} WHERE username = %s AND password = %s''',
+        f"SELECT * FROM {os.getenv('db_table_name')} WHERE username = ? AND password = ?",
         (str(credentials[1]), str(credentials[2]))
     )
 
@@ -123,32 +39,26 @@ def server_controller(client_sock, conn_ip, conn_num, firewall_mode, thread_id):
         pass
 
     if results:
-        send_data(client_sock, True, client_public_key)
+        send_data(client_sock, True)
         print(f"{user_db_id} | {employee_name}:{username} | {job_title}:{db_role} | has accessed the database.")
+        print("UPDATE: USER PASSED LOGIN")
         receive_data(client_sock, conn_num, thread_id, db, cursor, db_role, user_write_table_access,
-                     user_read_table_access, server_private_key, client_public_key)
+                      user_read_table_access)
     else:
-        client_sock.sendall(client_sock, False, client_public_key)
+        send_data(client_sock, False)
         print(f"{conn_ip} Failed To Connect | Username Given: {str(credentials[1])}")
         close_connection(client_sock, conn_num, thread_id, db)
 
-
 ######################################## SERVER RESPONSE FUNCTIONS ###################################################
 
-def send_data(client_sock, data, public_key):
-    
+def send_data(client_sock, data):
     json_data = json.dumps(data)
-
-    print(f"################### {json_data}")
-    encrypted_data = encrypt_message(public_key, json_data.encode('utf-8'))
-    
-    data_length = len(encrypted_data)
+    data_length = len(json_data)
     header = f"{data_length:<{15}}".encode('utf-8')
-    client_sock.sendall(header + encrypted_data)
+    client_sock.sendall(header + json_data.encode('utf-8'))
 
 
-def receive_data(client_sock, conn_num, thread_id, db, cursor, db_role, user_write_table_access, user_read_table_access,
-                 server_private_key, client_public_key):
+def receive_data(client_sock, conn_num, thread_id, db, cursor, db_role, user_write_table_access, user_read_table_access):
     while True:
         try:
             header = client_sock.recv(15)
@@ -156,32 +66,24 @@ def receive_data(client_sock, conn_num, thread_id, db, cursor, db_role, user_wri
                 break
 
             data_length = int(header.strip())
-            data = client_sock.recv(data_length)
-
-            if server_private_key is not None:
-                decrypted_data = decrypt_message(server_private_key, data)
-                json_data = decrypted_data.decode('utf-8')
-            else:
-                json_data = data.decode('utf-8')
-
-            json_data = json.loads(json_data)
+            data = client_sock.recv(data_length).decode('utf-8')
+            json_data = json.loads(data)
             request_type = json_data[0]
 
             if request_type == "login":
                 return json_data
 
             elif request_type == "get_init_data":
-                user_table_names = init_data_response(client_sock, client_public_key, cursor, db_role, user_write_table_access,
+                user_table_names = init_data_response(client_sock, cursor, db_role, user_write_table_access,
                                                      user_read_table_access)
                 user_write_table_names = user_table_names[0]
                 user_read_table_names = user_table_names[1]
 
             elif request_type == "update_loaded_table":
-                print(f"Request {request_type} recieved.")
                 requested_table = json_data[1]
                 result_select = int(json_data[2])
                 update_loaded_table(client_sock, cursor, user_write_table_names, user_read_table_names, requested_table,
-                                    result_select, client_public_key)
+                                    result_select)
 
             elif request_type == "log_out":
                 close_connection(client_sock, conn_num, thread_id, db)
@@ -191,8 +93,9 @@ def receive_data(client_sock, conn_num, thread_id, db, cursor, db_role, user_wri
 
 ######################################## DATA MANIPULATION FUNCTIONS ###################################################
 
-def init_data_response(client_sock, client_public_key, cursor, db_role, user_write_table_access, user_read_table_access):
-    cursor.execute(f'''SHOW TABLES''')
+def init_data_response(client_sock, cursor, db_role, user_write_table_access, user_read_table_access):
+    print("UPDATE: IN GET INIT DATA")
+    cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
     database_table_names_curse = cursor.fetchall()
 
     database_table_names = []
@@ -202,6 +105,7 @@ def init_data_response(client_sock, client_public_key, cursor, db_role, user_wri
     for tables in database_table_names_curse:
         database_table_names.append(tables[0])
 
+    print(f"formatted tables: {database_table_names}")
     # Write control-------------------------------------------------------------------------------
 
     if user_write_table_access == "all" or db_role == "admin":
@@ -225,31 +129,38 @@ def init_data_response(client_sock, client_public_key, cursor, db_role, user_wri
                 user_read_table_names.append(str(table_name))
 
     data = [user_write_table_names, user_read_table_names]
-    send_data(client_sock, data, client_public_key)
+    send_data(client_sock, data)
 
     return user_write_table_names, user_read_table_names
 
 
-def update_loaded_table(client_sock, cursor, user_write_table_names, user_read_table_names, requested_table, result_select, client_public_key):
-    print("In update loaded table.")
-    df_column_attributes = []
+def update_loaded_table(client_sock, cursor, user_write_table_names, user_read_table_names, requested_table,
+                        result_select):
+    
+    print("")
+    
     column_names = []
     df = pd.DataFrame()
 
     user_table_names = user_read_table_names + user_write_table_names
 
     if len(user_table_names) >= 1 and requested_table in user_table_names:
-        cursor.execute(f'''SHOW COLUMNS FROM {requested_table}''')
-        df_column_attributes = cursor.fetchall()
-        for column in df_column_attributes:
-            column_names.append(column[0])
+
+        cursor.execute(f"PRAGMA table_info({requested_table})")
+        columns = cursor.fetchall()
+
+        # Print the column names
+        for column in columns:
+            column_names.append(column[1])
+
+        print(f"UPDATE: GOT COLUMN NAMES {column_names}")
 
         cursor.execute(f'''SELECT * FROM {requested_table} LIMIT {result_select}''')
         df = pd.DataFrame(cursor.fetchall(), columns=column_names)
         df = df.to_dict()
 
     data = [df]
-    send_data(client_sock, data, client_public_key)
+    send_data(client_sock, data)
 
 
 ######################################## SOCKET SECURITY LAYER #######################################################
@@ -280,25 +191,25 @@ def generate_ssl_certificate(cert_file, key_file):
 
 
 def close_connection(client_sock, conn_num, thread_id, db):
-    try:
-        client_sock.shutdown(socket.SHUT_RDWR)
-        client_sock.close()
+
+    client_sock.shutdown(socket.SHUT_RDWR)
+    client_sock.close()
+
+    if conn_num != None:
         db.close()
-    except socket.error:
-        pass
+        with LOCK:
+            thread = ACTIVE_THREADS.get(thread_id)
+            if thread:
+                del ACTIVE_THREADS[thread_id]
+                print(f"Closing Connection: ({conn_num}) | Current Thread ({thread_id})")
+                if thread["thread"] != threading.current_thread():  # Skip joining the current thread
+                    thread["event"].set()
+                    thread["thread"].join()
+            else:
+                print(f"Thread {thread_id} does not exist.")
 
-    with LOCK:
-        thread = ACTIVE_THREADS.get(thread_id)
-        if thread:
-            del ACTIVE_THREADS[thread_id]
-            print(f"Closing Connection: ({conn_num}) | Current Thread ({thread_id})")
-            if thread["thread"] != threading.current_thread():  # Skip joining the current thread
-                thread["event"].set()
-                thread["thread"].join()
-        else:
-            print(f"Thread {thread_id} does not exist.")
+        print(f"Connection {conn_num} closed.")
 
-    print(f"Connection {conn_num} closed.")
 
 
 ######################################## START-UP SCRIPT ###################################################
@@ -326,30 +237,45 @@ def main():
     ssl_server_socket = context.wrap_socket(server_socket, server_side=True)
     ssl_server_socket.listen()
 
+    db = sqlite3.connect(f"database_container/{os.getenv('db_name')}")
+    cursor = db.cursor()
+
     # GUARANTEE FIREWALL IS SET PROPERLY
     print("Server Online.")
-    firewall_mode = str(os.getenv("firewall_mode")).lower()
-    if firewall_mode not in ["whitelist", "blacklist"]:
-        print('Firewall Enabled With No Mode... Setting to "blacklist" Mode')
-        firewall_mode = "blacklist"
-    print(f"Firewall Enabled | Mode: {firewall_mode}")
+    firewall_enabled = str(os.getenv("firewall_enabled")).lower()
 
     while True:
         client_sock, addr = ssl_server_socket.accept()
         print(f"incoming connection by: {addr}")
 
-        thread_id = len(ACTIVE_THREADS) + 1
-        terminate_event = threading.Event()
+        #test if firewall enabled
+        create_thread = True
+        if firewall_enabled == "true":
+            print("Firewall enabled")
+            cursor.execute("SELECT is_blocked FROM a001_firewall WHERE ip_address = ?", (addr[0],))
+            result = cursor.fetchone()
 
-        TOTAL_CONNECTIONS += 1
-        conn_num = TOTAL_CONNECTIONS
-        thread = threading.Thread(target=server_controller,
-                                  args=(client_sock, addr[0], conn_num, firewall_mode, thread_id,))
-        ACTIVE_THREADS[thread_id] = {"thread": thread, "event": terminate_event}
-        thread.start()
-        print(
-            f'''Active Clients ({len(ACTIVE_THREADS)}) | Closed Clients ({TOTAL_CONNECTIONS - len(ACTIVE_THREADS)}) | Total: ({TOTAL_CONNECTIONS}).''')
+            if result is not None:
+                is_blocked = result[0]
+                if is_blocked:
+                    send_data(client_sock, False)
+                    close_connection(client_sock, None, None, None)
+                    create_thread = False
+                else:
+                    print("UPDATE: USER PASSED FIREWALL")
 
+        if create_thread:
+            thread_id = len(ACTIVE_THREADS) + 1
+            terminate_event = threading.Event()
+
+            TOTAL_CONNECTIONS += 1
+            conn_num = TOTAL_CONNECTIONS
+            thread = threading.Thread(target=server_controller,
+                                    args=(client_sock, addr[0], conn_num, thread_id,))
+            ACTIVE_THREADS[thread_id] = {"thread": thread, "event": terminate_event}
+            thread.start()
+            print(
+                f'''Active Clients ({len(ACTIVE_THREADS)}) | Closed Clients ({TOTAL_CONNECTIONS - len(ACTIVE_THREADS)}) | Total: ({TOTAL_CONNECTIONS}).''')
 
 if __name__ == "__main__":
     main()

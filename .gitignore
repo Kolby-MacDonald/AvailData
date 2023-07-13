@@ -3,3 +3,6 @@ Server/.env
 Client/.env
 Testing/client_side_encryption/commands.py
 *.pem
+*.db
+Server/z_mysqltesting.py
+Server/z_sqlite3testing.py
