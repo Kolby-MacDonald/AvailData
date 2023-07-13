@@ -77,6 +77,13 @@ background-color:rgba(0,0,0,0.5);
 border-radius: 15;
 color: white;
 }
+
+QComboBox{
+border-radius: 10px;
+background-color: rgba(49, 51, 56,0.8);
+font-size:19px;
+text-align: center;
+}
 </string>
      </property>
      <property name="frameShape">
@@ -97,7 +104,7 @@ color: white;
       <property name="font">
        <font>
         <family>Trebuchet MS</family>
-        <pointsize>1</pointsize>
+        <pointsize>-1</pointsize>
        </font>
       </property>
       <property name="styleSheet">
@@ -132,46 +139,19 @@ font-size:19px;</string>
        <string/>
       </property>
      </widget>
-     <widget class="QLabel" name="title_label">
-      <property name="geometry">
-       <rect>
-        <x>420</x>
-        <y>20</y>
-        <width>481</width>
-        <height>61</height>
-       </rect>
-      </property>
-      <property name="font">
-       <font>
-        <family>Trebuchet MS</family>
-        <pointsize>1</pointsize>
-       </font>
-      </property>
-      <property name="styleSheet">
-       <string notr="true">font-size: 38px;
-color: red;
-background-color: rgba(0,0,0,0.8);</string>
-      </property>
-      <property name="text">
-       <string>Temporary Main Page</string>
-      </property>
-      <property name="alignment">
-       <set>Qt::AlignCenter</set>
-      </property>
-     </widget>
      <widget class="QLabel" name="result_select_label">
       <property name="geometry">
        <rect>
-        <x>920</x>
+        <x>860</x>
         <y>20</y>
-        <width>161</width>
+        <width>221</width>
         <height>61</height>
        </rect>
       </property>
       <property name="font">
        <font>
         <family>Trebuchet MS</family>
-        <pointsize>1</pointsize>
+        <pointsize>-1</pointsize>
        </font>
       </property>
       <property name="styleSheet">
@@ -179,7 +159,7 @@ background-color: rgba(0,0,0,0.8);</string>
 font-size:19px;</string>
       </property>
       <property name="text">
-       <string>Results  </string>
+       <string> Results  </string>
       </property>
       <property name="alignment">
        <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -188,32 +168,39 @@ font-size:19px;</string>
      <widget class="QComboBox" name="result_select_combobox">
       <property name="geometry">
        <rect>
-        <x>930</x>
+        <x>870</x>
         <y>30</y>
-        <width>71</width>
+        <width>81</width>
         <height>41</height>
        </rect>
       </property>
       <property name="font">
        <font>
         <family>Trebuchet MS</family>
-        <pointsize>1</pointsize>
+        <pointsize>-1</pointsize>
        </font>
+      </property>
+      <property name="layoutDirection">
+       <enum>Qt::LeftToRight</enum>
       </property>
       <property name="autoFillBackground">
        <bool>false</bool>
       </property>
       <property name="styleSheet">
-       <string notr="true">border-radius: 10px;
-background-color: rgba(49, 51, 56,0.8);
-font-size:19px;</string>
+       <string notr="true"/>
+      </property>
+      <property name="editable">
+       <bool>false</bool>
+      </property>
+      <property name="insertPolicy">
+       <enum>QComboBox::NoInsert</enum>
       </property>
       <property name="sizeAdjustPolicy">
        <enum>QComboBox::AdjustToContentsOnFirstShow</enum>
       </property>
       <item>
        <property name="text">
-        <string>100</string>
+        <string>25</string>
        </property>
       </item>
       <item>
@@ -223,17 +210,27 @@ font-size:19px;</string>
       </item>
       <item>
        <property name="text">
-        <string>25</string>
+        <string>100</string>
        </property>
       </item>
       <item>
        <property name="text">
-        <string>10</string>
+        <string>250</string>
        </property>
       </item>
       <item>
        <property name="text">
-        <string>5</string>
+        <string>500</string>
+       </property>
+      </item>
+      <item>
+       <property name="text">
+        <string>1000</string>
+       </property>
+      </item>
+      <item>
+       <property name="text">
+        <string extracomment="Really large databases will take a long time to load.">ALL</string>
        </property>
       </item>
      </widget>
@@ -430,7 +427,7 @@ border: 0px;
       <property name="font">
        <font>
         <family>Trebuchet MS</family>
-        <pointsize>1</pointsize>
+        <pointsize>-1</pointsize>
        </font>
       </property>
       <property name="layoutDirection">
@@ -473,6 +470,57 @@ font-size:20px;
       </property>
       <property name="text">
        <string>Log Out</string>
+      </property>
+     </widget>
+     <widget class="QLabel" name="title_label">
+      <property name="geometry">
+       <rect>
+        <x>410</x>
+        <y>20</y>
+        <width>431</width>
+        <height>61</height>
+       </rect>
+      </property>
+      <property name="font">
+       <font>
+        <family>Trebuchet MS</family>
+        <pointsize>-1</pointsize>
+       </font>
+      </property>
+      <property name="styleSheet">
+       <string notr="true">font-size: 38px;
+color: red;
+background-color: rgba(0,0,0,0.8);</string>
+      </property>
+      <property name="text">
+       <string>Temporary Main Page</string>
+      </property>
+      <property name="alignment">
+       <set>Qt::AlignCenter</set>
+      </property>
+     </widget>
+     <widget class="QPushButton" name="lastfirst_pushButton">
+      <property name="geometry">
+       <rect>
+        <x>950</x>
+        <y>30</y>
+        <width>51</width>
+        <height>41</height>
+       </rect>
+      </property>
+      <property name="font">
+       <font>
+        <family>Trebuchet MS</family>
+        <pointsize>-1</pointsize>
+       </font>
+      </property>
+      <property name="styleSheet">
+       <string notr="true">QPushButton{
+font-size: 19px;
+}</string>
+      </property>
+      <property name="text">
+       <string>Last</string>
       </property>
      </widget>
     </widget>

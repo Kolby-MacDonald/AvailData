@@ -57,15 +57,21 @@ class LoginPage(QDialog):
                 data = ["login", username, enc_password]
                 send_data(data)
 
-                response = recieve_data()
+                response = receive_data()
+                print(response)
 
                 if response == True:
+                    print("opening page")
                     self.open_user_page()
                 else:
                     close_connection()
                     print("Failed")
     
-            except: print("Server Refused to Connect")
+            except: 
+                print("Server Refused to Connect")
+                try:
+                    close_connection()
+                except: pass
             
         else:
             print("Enter your credentials to login.")
@@ -113,7 +119,9 @@ class UserPage(QDialog):
         self.result_select_combobox.currentIndexChanged.connect(lambda: UserPage.request_handler(self, "update_loaded_table"))
         self.logout_button.clicked.connect(lambda: UserPage.request_handler(self, "log_out"))
         self.readwrite_radioButton.clicked.connect(lambda: UserPage.readwrite_table_control(self))
+        self.lastfirst_pushButton.clicked.connect(lambda: UserPage.read_order(self))
 
+        print("in init")
         UserPage.request_handler(self, "get_init_data")
 
     #----------------------------------------------- CLIENT REQUEST FUNCTIONS #---------------------------------------
@@ -123,15 +131,21 @@ class UserPage(QDialog):
         if request == "get_init_data":
             data = [request]
             send_data(data)
-            user_table_names = recieve_data()
+            user_table_names = receive_data()
             self.user_write_table_names = user_table_names[0]
             self.user_read_table_names = user_table_names[1]
             UserPage.get_init_data(self)
 
         elif request == "update_loaded_table":
-            data = [request, self.table_select_combobox.currentText(), self.result_select_combobox.currentText()]
+            if self.lastfirst_pushButton.text() == "Last":
+                result_select = "-"+self.result_select_combobox.currentText()
+            elif self.lastfirst_pushButton.text() == "First":
+                result_select = self.result_select_combobox.currentText()
+
+            data = [request, self.table_select_combobox.currentText(), result_select]
             send_data(data)
-            table_data = recieve_data()
+            print(data)
+            table_data = receive_data()
             UserPage.update_table_view(self, table_data)
         
         elif request == "log_out":
@@ -187,15 +201,34 @@ class UserPage(QDialog):
                 item.setTextAlignment(Qt.AlignCenter)  # Qt.AlignCenter
                 self.loaded_table_edit.setVerticalHeaderItem(row, item)
 
-            for column, title in enumerate(column_titles):
-                for row, item in enumerate(df[title]):
-                    item = str(item)
-                    if item == 'None':
-                        item = ''
-                    self.loaded_table_edit.setItem(row, column, QTableWidgetItem(item))
+            if self.lastfirst_pushButton.text() == "Last":
+                for column, title in enumerate(column_titles):
+                    for row, item in enumerate(reversed(df[title])):
+                        item = str(item)
+                        if item == 'None':
+                            item = ''
+                        self.loaded_table_edit.setItem(row, column, QTableWidgetItem(item))
+            else:
+                for column, title in enumerate(column_titles):
+                    for row, item in enumerate(df[title]):
+                        item = str(item)
+                        if item == 'None':
+                            item = ''
+                        self.loaded_table_edit.setItem(row, column, QTableWidgetItem(item))
+                
+                
+                
 
         else:
             print("No Acessable Tables Found")
+
+    def read_order(self):
+        if self.lastfirst_pushButton.text() == "Last":
+            self.lastfirst_pushButton.setText("First")
+        elif self.lastfirst_pushButton.text() == "First":
+            self.lastfirst_pushButton.setText("Last")
+
+        UserPage.request_handler(self, "update_loaded_table")
     
     def readwrite_table_control(self):
         if self.readwrite_radioButton.isChecked():
@@ -212,20 +245,43 @@ def send_data(data):
     json_data = json.dumps(data)
     data_length = len(json_data)
     header = f"{data_length:<{15}}".encode('utf-8')
-    CLIENT.sendall(header + json_data.encode('utf-8'))
+    print(data_length)
+    print(len(json_data.encode('utf-8')))
 
-def recieve_data():
+    chunk_size = 16380
+    chunks = [json_data[i:i+chunk_size] for i in range(0, len(json_data), chunk_size)]
+
+    CLIENT.sendall(header)
+
+    for chunk in chunks:
+        CLIENT.sendall(chunk.encode('utf-8'))
+
+
+def receive_data():
+    print("in receive data")
     try:
         header = CLIENT.recv(15)
         if not header:
             return None
 
         data_length = int(header.strip())
-        data = CLIENT.recv(data_length).decode('utf-8')
-        json_data = json.loads(data)
-        return(json_data)
+        data = b""
+        remaining_bytes = data_length
+
+        while remaining_bytes > 0:
+            chunk = CLIENT.recv(remaining_bytes)
+            if not chunk:
+                return None
+            data += chunk
+            remaining_bytes -= len(chunk)
+
+        json_data = json.loads(data.decode('utf-8'))
+        print(json_data)
+        return json_data
     except:
         pass
+
+
 
 def close_connection():
     global CLIENT

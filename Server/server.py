@@ -19,7 +19,6 @@ def server_controller(client_sock, conn_ip, conn_num, thread_id):
 
     credentials = receive_data(client_sock, conn_num, thread_id, None, None, None, None, None)
 
-    print("UPDATE: RECEIVED CREDENTIALS")
 
     cursor.execute(
         f"SELECT * FROM {os.getenv('db_table_name')} WHERE username = ? AND password = ?",
@@ -41,7 +40,6 @@ def server_controller(client_sock, conn_ip, conn_num, thread_id):
     if results:
         send_data(client_sock, True)
         print(f"{user_db_id} | {employee_name}:{username} | {job_title}:{db_role} | has accessed the database.")
-        print("UPDATE: USER PASSED LOGIN")
         receive_data(client_sock, conn_num, thread_id, db, cursor, db_role, user_write_table_access,
                       user_read_table_access)
     else:
@@ -54,8 +52,16 @@ def server_controller(client_sock, conn_ip, conn_num, thread_id):
 def send_data(client_sock, data):
     json_data = json.dumps(data)
     data_length = len(json_data)
+    print(data_length)
     header = f"{data_length:<{15}}".encode('utf-8')
-    client_sock.sendall(header + json_data.encode('utf-8'))
+
+    chunk_size = 16380
+    chunks = [json_data[i:i+chunk_size] for i in range(0, len(json_data), chunk_size)]
+
+    client_sock.sendall(header)
+
+    for chunk in chunks:
+        client_sock.sendall(chunk.encode('utf-8'))
 
 
 def receive_data(client_sock, conn_num, thread_id, db, cursor, db_role, user_write_table_access, user_read_table_access):
@@ -66,8 +72,17 @@ def receive_data(client_sock, conn_num, thread_id, db, cursor, db_role, user_wri
                 break
 
             data_length = int(header.strip())
-            data = client_sock.recv(data_length).decode('utf-8')
-            json_data = json.loads(data)
+            data = b""
+            remaining_bytes = data_length
+
+            while remaining_bytes > 0:
+                chunk = client_sock.recv(remaining_bytes)
+                if not chunk:
+                    break
+                data += chunk
+                remaining_bytes -= len(chunk)
+
+            json_data = json.loads(data.decode('utf-8'))
             request_type = json_data[0]
 
             if request_type == "login":
@@ -81,7 +96,7 @@ def receive_data(client_sock, conn_num, thread_id, db, cursor, db_role, user_wri
 
             elif request_type == "update_loaded_table":
                 requested_table = json_data[1]
-                result_select = int(json_data[2])
+                result_select = json_data[2]
                 update_loaded_table(client_sock, cursor, user_write_table_names, user_read_table_names, requested_table,
                                     result_select)
 
@@ -91,10 +106,10 @@ def receive_data(client_sock, conn_num, thread_id, db, cursor, db_role, user_wri
             pass
 
 
+
 ######################################## DATA MANIPULATION FUNCTIONS ###################################################
 
 def init_data_response(client_sock, cursor, db_role, user_write_table_access, user_read_table_access):
-    print("UPDATE: IN GET INIT DATA")
     cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
     database_table_names_curse = cursor.fetchall()
 
@@ -105,7 +120,6 @@ def init_data_response(client_sock, cursor, db_role, user_write_table_access, us
     for tables in database_table_names_curse:
         database_table_names.append(tables[0])
 
-    print(f"formatted tables: {database_table_names}")
     # Write control-------------------------------------------------------------------------------
 
     if user_write_table_access == "all" or db_role == "admin":
@@ -137,29 +151,45 @@ def init_data_response(client_sock, cursor, db_role, user_write_table_access, us
 def update_loaded_table(client_sock, cursor, user_write_table_names, user_read_table_names, requested_table,
                         result_select):
     
-    print("")
     
     column_names = []
     df = pd.DataFrame()
 
     user_table_names = user_read_table_names + user_write_table_names
 
-    if len(user_table_names) >= 1 and requested_table in user_table_names:
+    if requested_table != "":
+        if len(user_table_names) >= 1 and requested_table in user_table_names:
 
-        cursor.execute(f"PRAGMA table_info({requested_table})")
-        columns = cursor.fetchall()
+            cursor.execute(f"PRAGMA table_info({requested_table})")
+            columns = cursor.fetchall()
 
-        # Print the column names
-        for column in columns:
-            column_names.append(column[1])
+            # Print the column names
+            for column in columns:
+                column_names.append(column[1])
 
-        print(f"UPDATE: GOT COLUMN NAMES {column_names}")
+            if result_select == "ALL" or result_select == "-ALL":
+                print("sendin all sir")
+                cursor.execute(f'''SELECT * FROM {requested_table} LIMIT 10000''')
+            elif result_select.isdigit():
+                print(25)
+                cursor.execute(f'''SELECT * FROM {requested_table} LIMIT {int(result_select)}''')
 
-        cursor.execute(f'''SELECT * FROM {requested_table} LIMIT {result_select}''')
+            elif result_select.startswith("-") and result_select[1:].isdigit():
+                print("caught neg")
+                cursor.execute(f"SELECT COUNT(1) FROM {requested_table}")
+                row_count = cursor.fetchone()[0]
+                print(row_count)
+                print(f"Off = {row_count - int(result_select)}")
+                cursor.execute(f'''SELECT * FROM {requested_table} LIMIT {int(result_select)} OFFSET {int(result_select) + row_count}''')
+
+            else:
+                cursor.execute(f'''SELECT * FROM {requested_table} LIMIT 0''')
+        
         df = pd.DataFrame(cursor.fetchall(), columns=column_names)
         df = df.to_dict()
-
-    data = [df]
+        data = [df]
+        
+    else: data = []
     send_data(client_sock, data)
 
 
@@ -261,8 +291,6 @@ def main():
                     send_data(client_sock, False)
                     close_connection(client_sock, None, None, None)
                     create_thread = False
-                else:
-                    print("UPDATE: USER PASSED FIREWALL")
 
         if create_thread:
             thread_id = len(ACTIVE_THREADS) + 1
