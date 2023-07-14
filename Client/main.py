@@ -55,17 +55,14 @@ class LoginPage(QDialog):
                     CLIENT.connect((os.getenv("pub_ip"), int(os.getenv("pub_port"))))
 
                 AES_KEY = key_exchange_handler()
-                print(AES_KEY)
 
                 data = ["login", username, enc_password]
-                print(f"Sending {data}")
                 send_data(data)
 
                 response = receive_data()
-                print(response)
+
 
                 if response == True:
-                    print("opening page")
                     self.open_user_page()
                 else:
                     close_connection()
@@ -124,7 +121,6 @@ class UserPage(QDialog):
         self.readwrite_radioButton.clicked.connect(lambda: UserPage.readwrite_table_control(self))
         self.lastfirst_pushButton.clicked.connect(lambda: UserPage.read_order(self))
 
-        print("in init")
         UserPage.request_handler(self, "get_init_data")
 
     #----------------------------------------------- CLIENT REQUEST FUNCTIONS #---------------------------------------
@@ -147,7 +143,6 @@ class UserPage(QDialog):
 
             data = [request, self.table_select_combobox.currentText(), result_select]
             send_data(data)
-            print(data)
             table_data = receive_data()
             UserPage.update_table_view(self, table_data)
         
@@ -163,7 +158,6 @@ class UserPage(QDialog):
     def get_init_data(self):
 
         if self.user_write_table_names != [] or self.user_read_table_names != []:
-            print(self.user_write_table_names + self.user_read_table_names)
             self.table_select_combobox.addItems(self.user_write_table_names + self.user_read_table_names)
         else:
             self.readwrite_radioButton.setChecked(False)
@@ -249,11 +243,9 @@ from Crypto.Util.Padding import pad, unpad
 
 
 def aes_encrypt(json_data):
-    print("IN ENCRYPTION")
     cipher = AES.new(AES_KEY, AES.MODE_ECB)
     padded_json_data = pad(json_data.encode(), AES.block_size)
     enc_data = cipher.encrypt(padded_json_data)
-    print(enc_data)
     return enc_data
 
 def aes_decrypt(enc_data):
@@ -263,17 +255,13 @@ def aes_decrypt(enc_data):
     return json_data.decode()
 
 def send_data(data):
-    print("IN SEND DATA")
     json_data = json.dumps(data)
-    print(json_data)
     enc_data = aes_encrypt(json_data)
     data_length = len(enc_data)
     header = f"{data_length:<{15}}".encode('utf-8')
-    print(f"header len {header}")
 
     chunk_size = 16380
     chunks = [enc_data[i:i+chunk_size] for i in range(0, data_length, chunk_size)]
-    print(chunks)
     CLIENT.sendall(header)
 
     for chunk in chunks:
@@ -282,7 +270,6 @@ def send_data(data):
 
 
 def receive_data():
-    print("in receive data")
     try:
         header = CLIENT.recv(15)
         if not header:
@@ -299,12 +286,10 @@ def receive_data():
             data += chunk
             remaining_bytes -= len(chunk)
 
-        print(data)
         data = aes_decrypt(data)
 
         #json_data = json.loads(data.decode('utf-8'))
         json_data = json.loads(data)
-        print(json_data)
         return json_data
     except:
         pass

@@ -18,7 +18,6 @@ def server_controller(client_sock, conn_ip, conn_num, thread_id):
     cursor = db.cursor()
     
     aes_key = key_exchange_handler(client_sock)
-    print(aes_key)
 
     credentials = receive_data(client_sock, aes_key, conn_num, thread_id, None, None, None, None, None)
 
@@ -93,11 +92,9 @@ def aes_encrypt(data, aes_key):
 
 
 def aes_decrypt(enc_data, aes_key):
-    print("in decrypt data")
     cipher = AES.new(aes_key, AES.MODE_ECB)
     padded_enc_data = cipher.decrypt(enc_data)
     json_data = unpad(padded_enc_data, AES.block_size)
-    print(json_data.decode())
     return json_data.decode()
 
 
@@ -115,11 +112,9 @@ def send_data(client_sock, aes_key, data):
 
 
 def receive_data(client_sock, aes_key, conn_num, thread_id, db, cursor, db_role, user_write_table_access, user_read_table_access):
-    print("IN RECEIVE DATA")
     while True:
         try:
             header = client_sock.recv(15)
-            print(f"header recv {header}")
             if not header:
                 break
 
@@ -134,12 +129,10 @@ def receive_data(client_sock, aes_key, conn_num, thread_id, db, cursor, db_role,
                 data += chunk
                 remaining_bytes -= len(chunk)
 
-            print(f"data = {data}")
             data = aes_decrypt(data, aes_key)
 
             #json_data = json.loads(data.decode('utf-8'))
             json_data = json.loads(data)
-            print(f"JSON DATA = {json_data}")
             request_type = json_data[0]
 
             if request_type == "login":
@@ -217,23 +210,16 @@ def update_loaded_table(client_sock, aes_key, cursor, user_write_table_names, us
             cursor.execute(f"PRAGMA table_info({requested_table})")
             columns = cursor.fetchall()
 
-            # Print the column names
             for column in columns:
                 column_names.append(column[1])
 
-            if result_select == "ALL" or result_select == "-ALL":
-                print("sendin all sir")
-                cursor.execute(f'''SELECT * FROM {requested_table} LIMIT 10000''')
-            elif result_select.isdigit():
-                print(25)
+            
+            if result_select.isdigit():
                 cursor.execute(f'''SELECT * FROM {requested_table} LIMIT {int(result_select)}''')
 
             elif result_select.startswith("-") and result_select[1:].isdigit():
-                print("caught neg")
                 cursor.execute(f"SELECT COUNT(1) FROM {requested_table}")
                 row_count = cursor.fetchone()[0]
-                print(row_count)
-                print(f"Off = {row_count - int(result_select)}")
                 cursor.execute(f'''SELECT * FROM {requested_table} LIMIT {int(result_select)} OFFSET {int(result_select) + row_count}''')
 
             else:
@@ -355,8 +341,7 @@ def main():
                                     args=(client_sock, addr[0], conn_num, thread_id,))
             ACTIVE_THREADS[thread_id] = {"thread": thread, "event": terminate_event}
             thread.start()
-            print(
-                f'''Active Clients ({len(ACTIVE_THREADS)}) | Closed Clients ({TOTAL_CONNECTIONS - len(ACTIVE_THREADS)}) | Total: ({TOTAL_CONNECTIONS}).''')
+            print(f'''Active Clients ({len(ACTIVE_THREADS)}) | Closed Clients ({TOTAL_CONNECTIONS - len(ACTIVE_THREADS)}) | Total: ({TOTAL_CONNECTIONS}).''')
 
 if __name__ == "__main__":
     main()
