@@ -169,6 +169,9 @@ def init_data_response(client_sock, aes_key, cursor, db_role, user_write_table_a
     for tables in database_table_names_curse:
         database_table_names.append(tables[0])
 
+    untouchable_tables = ['sqlite_master', 'sqlite_sequence', 'sqlite_stat', 'sqlite_temp_master']
+    database_table_names= [table for table in database_table_names if all(unt_table not in table for unt_table in untouchable_tables)]
+
     # Write control-------------------------------------------------------------------------------
 
     if user_write_table_access == "all" or db_role == "admin":
@@ -193,7 +196,7 @@ def init_data_response(client_sock, aes_key, cursor, db_role, user_write_table_a
 
     data = [user_write_table_names, user_read_table_names]
     send_data(client_sock, aes_key, data)
-
+    
     return user_write_table_names, user_read_table_names
 
 
