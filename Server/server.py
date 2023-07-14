@@ -16,8 +16,11 @@ LOCK = threading.Lock()
 def server_controller(client_sock, conn_ip, conn_num, thread_id):
     db = sqlite3.connect(f"database_container/{os.getenv('db_name')}")
     cursor = db.cursor()
+    
+    aes_key = key_exchange_handler(client_sock)
+    print(aes_key)
 
-    credentials = receive_data(client_sock, conn_num, thread_id, None, None, None, None, None)
+    credentials = receive_data(client_sock, aes_key, conn_num, thread_id, None, None, None, None, None)
 
 
     cursor.execute(
@@ -38,36 +41,85 @@ def server_controller(client_sock, conn_ip, conn_num, thread_id):
         pass
 
     if results:
-        send_data(client_sock, True)
+        send_data(client_sock, aes_key, True)
         print(f"{user_db_id} | {employee_name}:{username} | {job_title}:{db_role} | has accessed the database.")
-        receive_data(client_sock, conn_num, thread_id, db, cursor, db_role, user_write_table_access,
+        receive_data(client_sock, aes_key, conn_num, thread_id, db, cursor, db_role, user_write_table_access,
                       user_read_table_access)
     else:
-        send_data(client_sock, False)
+        send_data(client_sock, aes_key, False)
         print(f"{conn_ip} Failed To Connect | Username Given: {str(credentials[1])}")
         close_connection(client_sock, conn_num, thread_id, db)
+######################################## KEY EXCHANGE ########################################################
+
+from cryptography.hazmat.primitives.asymmetric import rsa
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.asymmetric import padding
+from secrets import token_bytes
+
+def key_exchange_handler(client_sock):
+
+
+    aes_key = token_bytes(128//8) 
+
+    client_public_key = client_sock.recv(1024)
+    #ENCRYPT AES KEY
+    client_public_key = serialization.load_pem_public_key(client_public_key)
+    encrypted_key = client_public_key.encrypt(
+        aes_key,
+        padding.OAEP(
+            mgf=padding.MGF1(algorithm=hashes.SHA256()),
+            algorithm=hashes.SHA256(),
+            label=None
+        )
+        )
+    #SEND AES KEY
+    client_sock.sendall(encrypted_key)
+
+    return aes_key
+
 
 ######################################## SERVER RESPONSE FUNCTIONS ###################################################
 
-def send_data(client_sock, data):
+from Crypto.Cipher import AES
+from Crypto.Util.Padding import pad, unpad
+
+
+def aes_encrypt(data, aes_key):
+    cipher = AES.new(aes_key, AES.MODE_ECB)
+    padded_json_data = pad(data.encode(), AES.block_size)
+    enc_data = cipher.encrypt(padded_json_data)
+    return enc_data
+
+
+def aes_decrypt(enc_data, aes_key):
+    print("in decrypt data")
+    cipher = AES.new(aes_key, AES.MODE_ECB)
+    padded_enc_data = cipher.decrypt(enc_data)
+    json_data = unpad(padded_enc_data, AES.block_size)
+    print(json_data.decode())
+    return json_data.decode()
+
+
+def send_data(client_sock, aes_key, data):
     json_data = json.dumps(data)
-    data_length = len(json_data)
-    print(data_length)
+    enc_data = aes_encrypt(json_data, aes_key)
+    data_length = len(enc_data)
     header = f"{data_length:<{15}}".encode('utf-8')
-
     chunk_size = 16380
-    chunks = [json_data[i:i+chunk_size] for i in range(0, len(json_data), chunk_size)]
-
+    chunks = [enc_data[i:i+chunk_size] for i in range(0, data_length, chunk_size)]
     client_sock.sendall(header)
-
     for chunk in chunks:
-        client_sock.sendall(chunk.encode('utf-8'))
+        #client_sock.sendall(chunk.encode('utf-8'))
+        client_sock.sendall(chunk)
 
 
-def receive_data(client_sock, conn_num, thread_id, db, cursor, db_role, user_write_table_access, user_read_table_access):
+def receive_data(client_sock, aes_key, conn_num, thread_id, db, cursor, db_role, user_write_table_access, user_read_table_access):
+    print("IN RECEIVE DATA")
     while True:
         try:
             header = client_sock.recv(15)
+            print(f"header recv {header}")
             if not header:
                 break
 
@@ -82,22 +134,26 @@ def receive_data(client_sock, conn_num, thread_id, db, cursor, db_role, user_wri
                 data += chunk
                 remaining_bytes -= len(chunk)
 
-            json_data = json.loads(data.decode('utf-8'))
+            print(f"data = {data}")
+            data = aes_decrypt(data, aes_key)
+
+            #json_data = json.loads(data.decode('utf-8'))
+            json_data = json.loads(data)
+            print(f"JSON DATA = {json_data}")
             request_type = json_data[0]
 
             if request_type == "login":
                 return json_data
 
             elif request_type == "get_init_data":
-                user_table_names = init_data_response(client_sock, cursor, db_role, user_write_table_access,
-                                                     user_read_table_access)
+                user_table_names = init_data_response(client_sock, aes_key, cursor, db_role, user_write_table_access, user_read_table_access)
                 user_write_table_names = user_table_names[0]
                 user_read_table_names = user_table_names[1]
 
             elif request_type == "update_loaded_table":
                 requested_table = json_data[1]
                 result_select = json_data[2]
-                update_loaded_table(client_sock, cursor, user_write_table_names, user_read_table_names, requested_table,
+                update_loaded_table(client_sock, aes_key, cursor, user_write_table_names, user_read_table_names, requested_table,
                                     result_select)
 
             elif request_type == "log_out":
@@ -109,7 +165,7 @@ def receive_data(client_sock, conn_num, thread_id, db, cursor, db_role, user_wri
 
 ######################################## DATA MANIPULATION FUNCTIONS ###################################################
 
-def init_data_response(client_sock, cursor, db_role, user_write_table_access, user_read_table_access):
+def init_data_response(client_sock, aes_key, cursor, db_role, user_write_table_access, user_read_table_access):
     cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
     database_table_names_curse = cursor.fetchall()
 
@@ -143,14 +199,12 @@ def init_data_response(client_sock, cursor, db_role, user_write_table_access, us
                 user_read_table_names.append(str(table_name))
 
     data = [user_write_table_names, user_read_table_names]
-    send_data(client_sock, data)
+    send_data(client_sock, aes_key, data)
 
     return user_write_table_names, user_read_table_names
 
 
-def update_loaded_table(client_sock, cursor, user_write_table_names, user_read_table_names, requested_table,
-                        result_select):
-    
+def update_loaded_table(client_sock, aes_key, cursor, user_write_table_names, user_read_table_names, requested_table, result_select):
     
     column_names = []
     df = pd.DataFrame()
@@ -188,9 +242,9 @@ def update_loaded_table(client_sock, cursor, user_write_table_names, user_read_t
         df = pd.DataFrame(cursor.fetchall(), columns=column_names)
         df = df.to_dict()
         data = [df]
-        
+
     else: data = []
-    send_data(client_sock, data)
+    send_data(client_sock, aes_key, data)
 
 
 ######################################## SOCKET SECURITY LAYER #######################################################
@@ -288,7 +342,6 @@ def main():
             if result is not None:
                 is_blocked = result[0]
                 if is_blocked:
-                    send_data(client_sock, False)
                     close_connection(client_sock, None, None, None)
                     create_thread = False
 

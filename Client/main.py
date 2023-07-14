@@ -34,7 +34,7 @@ class LoginPage(QDialog):
         self.password_line_edit.setText("")
 
         if username != "" and password !="":
-            global CLIENT
+            global CLIENT, AES_KEY
             CLIENT = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             try:
                 # WRAP SOCKET IN SSL
@@ -54,7 +54,11 @@ class LoginPage(QDialog):
                     CLIENT = context.wrap_socket(CLIENT)
                     CLIENT.connect((os.getenv("pub_ip"), int(os.getenv("pub_port"))))
 
+                AES_KEY = key_exchange_handler()
+                print(AES_KEY)
+
                 data = ["login", username, enc_password]
+                print(f"Sending {data}")
                 send_data(data)
 
                 response = receive_data()
@@ -65,7 +69,6 @@ class LoginPage(QDialog):
                     self.open_user_page()
                 else:
                     close_connection()
-                    print("Failed")
     
             except: 
                 print("Server Refused to Connect")
@@ -241,20 +244,41 @@ class UserPage(QDialog):
 
 ######################################### SEND AND RECIEVE BUFFERED DATA ########################################
 
+from Crypto.Cipher import AES
+from Crypto.Util.Padding import pad, unpad
+
+
+def aes_encrypt(json_data):
+    print("IN ENCRYPTION")
+    cipher = AES.new(AES_KEY, AES.MODE_ECB)
+    padded_json_data = pad(json_data.encode(), AES.block_size)
+    enc_data = cipher.encrypt(padded_json_data)
+    print(enc_data)
+    return enc_data
+
+def aes_decrypt(enc_data):
+    cipher = AES.new(AES_KEY, AES.MODE_ECB)
+    padded_enc_data = cipher.decrypt(enc_data)
+    json_data = unpad(padded_enc_data, AES.block_size)
+    return json_data.decode()
+
 def send_data(data):
+    print("IN SEND DATA")
     json_data = json.dumps(data)
-    data_length = len(json_data)
+    print(json_data)
+    enc_data = aes_encrypt(json_data)
+    data_length = len(enc_data)
     header = f"{data_length:<{15}}".encode('utf-8')
-    print(data_length)
-    print(len(json_data.encode('utf-8')))
+    print(f"header len {header}")
 
     chunk_size = 16380
-    chunks = [json_data[i:i+chunk_size] for i in range(0, len(json_data), chunk_size)]
-
+    chunks = [enc_data[i:i+chunk_size] for i in range(0, data_length, chunk_size)]
+    print(chunks)
     CLIENT.sendall(header)
 
     for chunk in chunks:
-        CLIENT.sendall(chunk.encode('utf-8'))
+        #CLIENT.sendall(chunk.encode('utf-8'))
+        CLIENT.sendall(chunk)
 
 
 def receive_data():
@@ -275,7 +299,11 @@ def receive_data():
             data += chunk
             remaining_bytes -= len(chunk)
 
-        json_data = json.loads(data.decode('utf-8'))
+        print(data)
+        data = aes_decrypt(data)
+
+        #json_data = json.loads(data.decode('utf-8'))
+        json_data = json.loads(data)
         print(json_data)
         return json_data
     except:
@@ -292,6 +320,45 @@ def close_connection():
     CLIENT = None
     
     #CLIENT = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+
+######################################## KEY EXCHANGE ########################################################
+
+from cryptography.hazmat.primitives.asymmetric import rsa
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.asymmetric import padding
+
+def key_exchange_handler():
+    client_private_key = rsa.generate_private_key(
+        public_exponent=65537,
+        key_size=2048
+    )
+    client_public_key = client_private_key.public_key()
+
+    client_private_pem = client_private_key.private_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PrivateFormat.PKCS8,
+        encryption_algorithm=serialization.NoEncryption()
+    )
+    client_public_pem = client_public_key.public_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PublicFormat.SubjectPublicKeyInfo
+    )
+
+    CLIENT.sendall(client_public_pem)
+    encrypted_key = CLIENT.recv(1024)
+    client_private_pem = serialization.load_pem_private_key(client_private_pem, password=None)
+    aes_key = client_private_pem.decrypt(
+        encrypted_key,
+        padding.OAEP(
+            mgf=padding.MGF1(algorithm=hashes.SHA256()),
+            algorithm=hashes.SHA256(),
+            label=None
+        )
+    )
+    return aes_key
+    
 
 ######################################### SECURE SOCKET LAYER ########################################################
 
