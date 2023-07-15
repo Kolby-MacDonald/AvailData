@@ -12,6 +12,13 @@ from PyQt5 import QtWidgets
 from PyQt5.uic import loadUi
 from dotenv import load_dotenv
 from PyQt5.QtWidgets import QDialog, QApplication, QTableWidgetItem, QAbstractItemView
+from Crypto.Cipher import AES
+from Crypto.Util.Padding import pad, unpad
+from cryptography.hazmat.primitives.asymmetric import rsa
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.asymmetric import padding
+
 
 
 ################################################## LOG IN CLASS #######################################################
@@ -238,10 +245,6 @@ class UserPage(QDialog):
 
 ######################################### SEND AND RECIEVE BUFFERED DATA ########################################
 
-from Crypto.Cipher import AES
-from Crypto.Util.Padding import pad, unpad
-
-
 def aes_encrypt(json_data):
     cipher = AES.new(AES_KEY, AES.MODE_ECB)
     padded_json_data = pad(json_data.encode(), AES.block_size)
@@ -308,11 +311,6 @@ def close_connection():
 
 
 ######################################## KEY EXCHANGE ########################################################
-
-from cryptography.hazmat.primitives.asymmetric import rsa
-from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.asymmetric import padding
 
 def key_exchange_handler():
     client_private_key = rsa.generate_private_key(

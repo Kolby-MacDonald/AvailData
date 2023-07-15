@@ -7,6 +7,14 @@ import pandas as pd
 import sqlite3
 from OpenSSL import crypto
 from dotenv import load_dotenv
+from Crypto.Cipher import AES
+from Crypto.Util.Padding import pad, unpad
+from cryptography.hazmat.primitives.asymmetric import rsa
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.asymmetric import padding
+from secrets import token_bytes
+
 
 ACTIVE_THREADS = {}
 TOTAL_CONNECTIONS = 0
@@ -36,8 +44,7 @@ def server_controller(client_sock, conn_ip, conn_num, thread_id):
         username = results[4]
         user_write_table_access = results[7]
         user_read_table_access = results[8]
-    except:
-        pass
+    except: pass
 
     if results:
         send_data(client_sock, aes_key, True)
@@ -48,13 +55,8 @@ def server_controller(client_sock, conn_ip, conn_num, thread_id):
         send_data(client_sock, aes_key, False)
         print(f"{conn_ip} Failed To Connect | Username Given: {str(credentials[1])}")
         close_connection(client_sock, conn_num, thread_id, db)
-######################################## KEY EXCHANGE ########################################################
 
-from cryptography.hazmat.primitives.asymmetric import rsa
-from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.asymmetric import padding
-from secrets import token_bytes
+######################################## KEY EXCHANGE ########################################################
 
 def key_exchange_handler(client_sock):
 
@@ -77,12 +79,7 @@ def key_exchange_handler(client_sock):
 
     return aes_key
 
-
 ######################################## SERVER RESPONSE FUNCTIONS ###################################################
-
-from Crypto.Cipher import AES
-from Crypto.Util.Padding import pad, unpad
-
 
 def aes_encrypt(data, aes_key):
     cipher = AES.new(aes_key, AES.MODE_ECB)
@@ -153,8 +150,6 @@ def receive_data(client_sock, aes_key, conn_num, thread_id, db, cursor, db_role,
                 close_connection(client_sock, conn_num, thread_id, db)
         except:
             pass
-
-
 
 ######################################## DATA MANIPULATION FUNCTIONS ###################################################
 
