@@ -1,7 +1,7 @@
 # _**[ AVAILDATA ] © 2023 Kolby MacDonald. All rights reserved.**_
 - **A user-friendly database solution focused on _Secure and Available Data Storage_.**
 - Information Systems Security Capstone.
-- Do not copy or redistribute any content related to this project.
+- Do not copy or redistribute any content related to this project untill it is deemed completed and ready for public use.
 
 # **Overview**
 AvailData is a user-friendly, security-focused, multi-user remote access database manager that runs on a safe client application. The users and admins interact with a client application that connects to a secure server to safely control a traditionally serverless database. Their degree of access is based on the users given permissions.
