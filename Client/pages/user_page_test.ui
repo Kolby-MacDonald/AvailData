@@ -104,7 +104,7 @@ text-align: center;
       <property name="font">
        <font>
         <family>Trebuchet MS</family>
-        <pointsize>1</pointsize>
+        <pointsize>-1</pointsize>
        </font>
       </property>
       <property name="styleSheet">
@@ -151,7 +151,7 @@ font-size:19px;</string>
       <property name="font">
        <font>
         <family>Trebuchet MS</family>
-        <pointsize>1</pointsize>
+        <pointsize>-1</pointsize>
        </font>
       </property>
       <property name="styleSheet">
@@ -177,7 +177,7 @@ font-size:19px;</string>
       <property name="font">
        <font>
         <family>Trebuchet MS</family>
-        <pointsize>1</pointsize>
+        <pointsize>-1</pointsize>
        </font>
       </property>
       <property name="layoutDirection">
@@ -226,16 +226,6 @@ font-size:19px;</string>
       <item>
        <property name="text">
         <string>1000</string>
-       </property>
-      </item>
-      <item>
-       <property name="text">
-        <string extracomment="Really large databases will take a long time to load.">2500</string>
-       </property>
-      </item>
-      <item>
-       <property name="text">
-        <string>5000</string>
        </property>
       </item>
      </widget>
@@ -419,6 +409,38 @@ border: 0px;
         <bool>false</bool>
        </property>
       </widget>
+      <widget class="QPushButton" name="commit_pushButton">
+       <property name="enabled">
+        <bool>false</bool>
+       </property>
+       <property name="geometry">
+        <rect>
+         <x>810</x>
+         <y>10</y>
+         <width>111</width>
+         <height>21</height>
+        </rect>
+       </property>
+       <property name="styleSheet">
+        <string notr="true">QPushButton:enabled{
+font-size: 16px;
+border-radius: 10px;
+background-color: black;
+color: white;
+}
+
+
+QPushButton:disabled{
+font-size: 16px;
+border-radius: 10px;
+background-color: transparent;
+color: transparent;
+}</string>
+       </property>
+       <property name="text">
+        <string>Save Changes</string>
+       </property>
+      </widget>
      </widget>
      <widget class="QLabel" name="selected_table_label_2">
       <property name="geometry">
@@ -432,7 +454,7 @@ border: 0px;
       <property name="font">
        <font>
         <family>Trebuchet MS</family>
-        <pointsize>1</pointsize>
+        <pointsize>-1</pointsize>
        </font>
       </property>
       <property name="layoutDirection">
@@ -489,7 +511,7 @@ font-size:20px;
       <property name="font">
        <font>
         <family>Trebuchet MS</family>
-        <pointsize>1</pointsize>
+        <pointsize>-1</pointsize>
        </font>
       </property>
       <property name="styleSheet">
@@ -516,7 +538,7 @@ background-color: rgba(0,0,0,0.8);</string>
       <property name="font">
        <font>
         <family>Trebuchet MS</family>
-        <pointsize>1</pointsize>
+        <pointsize>-1</pointsize>
        </font>
       </property>
       <property name="styleSheet">

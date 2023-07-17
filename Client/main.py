@@ -127,10 +127,47 @@ class UserPage(QDialog):
         self.logout_button.clicked.connect(lambda: UserPage.request_handler(self, "log_out"))
         self.readwrite_radioButton.clicked.connect(lambda: UserPage.readwrite_table_control(self))
         self.lastfirst_pushButton.clicked.connect(lambda: UserPage.read_order(self))
+        self.commit_pushButton.clicked.connect(lambda: UserPage.commit_changes(self))
 
         UserPage.request_handler(self, "get_init_data")
 
     #----------------------------------------------- CLIENT REQUEST FUNCTIONS #---------------------------------------
+
+    def commit_changes(self):
+        print("Saving Changes")
+        table_data = {}
+        column_titles = []
+        for column in range(self.loaded_table_edit.columnCount()):
+            item = self.loaded_table_edit.horizontalHeaderItem(column)
+            if item is not None:
+                column_titles.append(item.text())
+            else:
+                column_titles.append("")  # Handle empty column names if needed
+
+        for row in range(self.loaded_table_edit.rowCount()):
+            for column, title in enumerate(column_titles):
+                item = self.loaded_table_edit.item(row, column)
+                if item is not None:
+                    text = item.text()
+                    table_data.setdefault(title, []).append(text)
+
+
+        current_df = pd.DataFrame.from_dict(table_data)
+        current_df = current_df.iloc[::-1].reset_index(drop=True)
+        current_df = current_df.astype(self.original_df.dtypes)
+
+        original_list = self.original_df.values.tolist()
+        current_list = current_df.values.tolist()
+
+        # Compare the original and current lists
+        if original_list == current_list:
+            print("No modifications made.")
+        else:
+            modified_rows = [i for i, (orig_row, curr_row) in enumerate(zip(original_list, current_list)) if orig_row != curr_row]
+            print("Modified Rows:")
+            for row in modified_rows:
+                print(current_list[row])
+
 
     def request_handler(self, request):
 
@@ -178,17 +215,25 @@ class UserPage(QDialog):
             self.readwrite_radioButton.setChecked(False)
             self.readwrite_radioButton.setEnabled(False)
             self.readwrite_radioButton.setText("Locked Table")
+
+            self.commit_pushButton.setEnabled(False)
+
             self.readwrite_table_control()
         elif self.table_select_combobox.currentText() in self.user_write_table_names:
             self.readwrite_radioButton.setText("Edit Mode")
             self.readwrite_radioButton.setEnabled(True)
+
+            self.commit_pushButton.setEnabled(True)
+
             self.readwrite_table_control()
 
         if table_data != []:
             table_data = table_data[0]
             df = pd.DataFrame.from_dict(table_data)
+            self.original_df = df
             column_titles = list(df.columns.values)
-            column_titles = [str(title) for title in column_titles]
+            print(column_titles)
+            #column_titles = [str(title) for title in column_titles]
 
             self.loaded_table_edit.setColumnCount(len(df.columns))
             self.loaded_table_edit.setRowCount(len(df.index))

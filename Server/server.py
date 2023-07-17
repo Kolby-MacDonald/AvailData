@@ -20,6 +20,13 @@ ACTIVE_THREADS = {}
 TOTAL_CONNECTIONS = 0
 LOCK = threading.Lock()
 
+#This class will store Local (to the thread) Variables, 
+# acting as global variables within each thread only.
+# this should clean up the server code.
+class _Vars():
+    def __init__(self):
+        super(_Vars,self).__init__()
+
 # Primary function controller.
 def server_controller(client_sock, conn_ip, conn_num, thread_id):
     db = sqlite3.connect(f"database_container/{os.getenv('db_name')}")
