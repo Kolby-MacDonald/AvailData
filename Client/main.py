@@ -133,42 +133,6 @@ class UserPage(QDialog):
 
     #----------------------------------------------- CLIENT REQUEST FUNCTIONS #---------------------------------------
 
-    def commit_changes(self):
-        print("Saving Changes")
-        table_data = {}
-        column_titles = []
-        for column in range(self.loaded_table_edit.columnCount()):
-            item = self.loaded_table_edit.horizontalHeaderItem(column)
-            if item is not None:
-                column_titles.append(item.text())
-            else:
-                column_titles.append("")  # Handle empty column names if needed
-
-        for row in range(self.loaded_table_edit.rowCount()):
-            for column, title in enumerate(column_titles):
-                item = self.loaded_table_edit.item(row, column)
-                if item is not None:
-                    text = item.text()
-                    table_data.setdefault(title, []).append(text)
-
-
-        current_df = pd.DataFrame.from_dict(table_data)
-        current_df = current_df.iloc[::-1].reset_index(drop=True)
-        current_df = current_df.astype(self.original_df.dtypes)
-
-        original_list = self.original_df.values.tolist()
-        current_list = current_df.values.tolist()
-
-        # Compare the original and current lists
-        if original_list == current_list:
-            print("No modifications made.")
-        else:
-            modified_rows = [i for i, (orig_row, curr_row) in enumerate(zip(original_list, current_list)) if orig_row != curr_row]
-            print("Modified Rows:")
-            for row in modified_rows:
-                print(current_list[row])
-
-
     def request_handler(self, request):
 
         if request == "get_init_data":
@@ -190,12 +154,25 @@ class UserPage(QDialog):
             table_data = receive_data()
             UserPage.update_table_view(self, table_data)
         
+        elif request == "update_database_row":
+            print("updating table row")
+            data = [request, self.table_select_combobox.currentText(), self.modified_rows_list]
+            send_data(data)
+            response = receive_data()
+            if response != "True":
+                print("Data was not accepted.")
+            else:
+                self.original_df = self.current_df
+
+        
         elif request == "log_out":
             self.loaded_table_edit.clear()
             close_connection()
             user_window = self
             widget.addWidget(login_window)
             widget.removeWidget(user_window)
+
+
 
     #----------------------------------------------- CLIENT UI FUNCTIONS -------------------------------------------
 
@@ -215,16 +192,12 @@ class UserPage(QDialog):
             self.readwrite_radioButton.setChecked(False)
             self.readwrite_radioButton.setEnabled(False)
             self.readwrite_radioButton.setText("Locked Table")
-
             self.commit_pushButton.setEnabled(False)
-
             self.readwrite_table_control()
         elif self.table_select_combobox.currentText() in self.user_write_table_names:
             self.readwrite_radioButton.setText("Edit Mode")
             self.readwrite_radioButton.setEnabled(True)
-
             self.commit_pushButton.setEnabled(True)
-
             self.readwrite_table_control()
 
         if table_data != []:
@@ -233,7 +206,7 @@ class UserPage(QDialog):
             self.original_df = df
             column_titles = list(df.columns.values)
             print(column_titles)
-            #column_titles = [str(title) for title in column_titles]
+            # column_titles = [str(title) for title in column_titles]
 
             self.loaded_table_edit.setColumnCount(len(df.columns))
             self.loaded_table_edit.setRowCount(len(df.index))
@@ -244,7 +217,7 @@ class UserPage(QDialog):
             for column in range(self.loaded_table_edit.columnCount()):
                 width = self.loaded_table_edit.columnWidth(column)
                 self.loaded_table_edit.setColumnWidth(column, width + 30)
-            
+
             for row in range(self.loaded_table_edit.rowCount()):
                 item = QTableWidgetItem(str(row + 1))
                 item.setTextAlignment(Qt.AlignCenter)  # Qt.AlignCenter
@@ -264,12 +237,35 @@ class UserPage(QDialog):
                         if item == 'None':
                             item = ''
                         self.loaded_table_edit.setItem(row, column, QTableWidgetItem(item))
-                
-                
-                
 
-        else:
-            print("No Acessable Tables Found")
+    def commit_changes(self):
+        print("Saving Changes")
+        table_data = {}
+        column_titles = [self.loaded_table_edit.horizontalHeaderItem(column).text() or "" for column in range(self.loaded_table_edit.columnCount())]
+
+        for row in range(self.loaded_table_edit.rowCount()):
+            for column, title in enumerate(column_titles):
+                item = self.loaded_table_edit.item(row, column)
+                if item is not None:
+                    text = item.text()
+                    table_data.setdefault(title, []).append(text)
+
+
+
+        current_df = pd.DataFrame.from_dict(table_data)
+        if self.lastfirst_pushButton.text() == "Last":
+            current_df = current_df.iloc[::-1].reset_index(drop=True)
+        self.current_df = current_df.astype(self.original_df.dtypes)
+
+        original_list = self.original_df.values.tolist()
+        current_list = self.current_df.values.tolist()
+
+        # Compare the original and current lists
+        if original_list != current_list:
+            self.modified_rows_list = [[index+1, orig_row, curr_row] for index, (orig_row, curr_row) in enumerate(zip(original_list, current_list)) if orig_row != curr_row]
+            print(f"Modified Rows: {self.modified_rows_list}")
+            self.modified_rows_list.append(self.current_df.columns.tolist())
+            UserPage.request_handler(self, "update_database_row")
 
     def read_order(self):
         if self.lastfirst_pushButton.text() == "Last":

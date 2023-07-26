@@ -150,8 +150,13 @@ def receive_data(client_sock, aes_key, conn_num, thread_id, db, cursor, db_role,
             elif request_type == "update_loaded_table":
                 requested_table = json_data[1]
                 result_select = json_data[2]
-                update_loaded_table(client_sock, aes_key, cursor, user_write_table_names, user_read_table_names, requested_table,
-                                    result_select)
+                update_loaded_table(client_sock, aes_key, cursor, user_write_table_names, user_read_table_names, requested_table, result_select)
+            
+            elif request_type == "update_database_row":
+                print("updating table row")
+                table_to_update = json_data[1]
+                update_data = json_data[2]
+                update_database_row(client_sock, aes_key, cursor, table_to_update, update_data, user_write_table_names)
 
             elif request_type == "log_out":
                 close_connection(client_sock, conn_num, thread_id, db)
@@ -198,15 +203,12 @@ def init_data_response(client_sock, aes_key, cursor, db_role, user_write_table_a
 
     data = [user_write_table_names, user_read_table_names]
     send_data(client_sock, aes_key, data)
-    
     return user_write_table_names, user_read_table_names
 
 
 def update_loaded_table(client_sock, aes_key, cursor, user_write_table_names, user_read_table_names, requested_table, result_select):
-    
     column_names = []
     df = pd.DataFrame()
-
     user_table_names = user_read_table_names + user_write_table_names
 
     if requested_table != "":
@@ -237,8 +239,58 @@ def update_loaded_table(client_sock, aes_key, cursor, user_write_table_names, us
     else: data = []
     send_data(client_sock, aes_key, data)
 
+def update_database_row(client_sock, aes_key, cursor, table_to_update, update_data, user_write_table_name):
+    print(update_data)
+    print('here')
+    print(update_data[1])
+    row_to_update = update_data[0][0]
+    old_row_data = update_data[0][1]
+    new_row_data = update_data[0][2]
+    column_names_associated = update_data[1]
+
+
+    print(f"UPDATING TABLE: {table_to_update}\nROW: {row_to_update}\nOLD: {old_row_data}\nNEW: {new_row_data}")
+    print(user_write_table_name)
+    print(column_names_associated)
+    if table_to_update in user_write_table_name:
+        try:
+            set_clauses = ', '.join([f'{col} = ?' for col in column_names_associated])
+            where_clauses = ' AND '.join([f'{col} = ?' for col in column_names_associated])
+            sql_query = f"UPDATE {table_to_update} SET {set_clauses} WHERE {where_clauses}"
+            update_values = tuple(new_row_data + old_row_data)
+            print(set_clauses)
+            print(where_clauses)
+            print(sql_query)
+            print(update_values)
+            cursor.execute(sql_query, update_values)
+            cursor.connection.commit()
+            send_data(client_sock, aes_key, True)
+        except:
+            print("Failure to update")
+    pass
+
 
 ######################################## SOCKET SECURITY LAYER #######################################################
+
+def close_connection(client_sock, conn_num, thread_id, db):
+
+    client_sock.shutdown(socket.SHUT_RDWR)
+    client_sock.close()
+
+    if conn_num != None:
+        db.close()
+        with LOCK:
+            thread = ACTIVE_THREADS.get(thread_id)
+            if thread:
+                del ACTIVE_THREADS[thread_id]
+                print(f"Closing Connection: ({conn_num}) | Current Thread ({thread_id})")
+                if thread["thread"] != threading.current_thread():  # Skip joining the current thread
+                    thread["event"].set()
+                    thread["thread"].join()
+            else:
+                print(f"Thread {thread_id} does not exist.")
+
+    print(f"Connection {conn_num} closed.")
 
 def generate_ssl_certificate(cert_file, key_file):
     # Create a new key pair
@@ -263,29 +315,6 @@ def generate_ssl_certificate(cert_file, key_file):
         key_file.write(crypto.dump_privatekey(crypto.FILETYPE_PEM, key))
 
     return cert_file, key_file
-
-
-def close_connection(client_sock, conn_num, thread_id, db):
-
-    client_sock.shutdown(socket.SHUT_RDWR)
-    client_sock.close()
-
-    if conn_num != None:
-        db.close()
-        with LOCK:
-            thread = ACTIVE_THREADS.get(thread_id)
-            if thread:
-                del ACTIVE_THREADS[thread_id]
-                print(f"Closing Connection: ({conn_num}) | Current Thread ({thread_id})")
-                if thread["thread"] != threading.current_thread():  # Skip joining the current thread
-                    thread["event"].set()
-                    thread["thread"].join()
-            else:
-                print(f"Thread {thread_id} does not exist.")
-
-        print(f"Connection {conn_num} closed.")
-
-
 
 ######################################## START-UP SCRIPT ###################################################
 
