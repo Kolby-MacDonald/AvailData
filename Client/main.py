@@ -159,10 +159,12 @@ class UserPage(QDialog):
             data = [request, self.table_select_combobox.currentText(), self.modified_rows_list]
             send_data(data)
             response = receive_data()
-            if response != "True":
-                print("Data was not accepted.")
-            else:
+            if response == True:
                 self.original_df = self.current_df
+            elif response == False:
+                self.request_handler("update_loaded_table")
+            else: #unexpected response
+                self.request_handler("update_loaded_table")
 
         
         elif request == "log_out":

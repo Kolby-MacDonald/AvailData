@@ -15,17 +15,11 @@ from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import padding
 from secrets import token_bytes
 
+import select
 
 ACTIVE_THREADS = {}
 TOTAL_CONNECTIONS = 0
 LOCK = threading.Lock()
-
-#This class will store Local (to the thread) Variables, 
-# acting as global variables within each thread only.
-# this should clean up the server code.
-class _Vars():
-    def __init__(self):
-        super(_Vars,self).__init__()
 
 # Primary function controller.
 def server_controller(client_sock, conn_ip, conn_num, thread_id):
@@ -267,7 +261,9 @@ def update_database_row(client_sock, aes_key, cursor, table_to_update, update_da
             send_data(client_sock, aes_key, True)
         except:
             print("Failure to update")
-    pass
+            send_data(client_sock, aes_key, False)
+    else:
+        send_data(client_sock, aes_key, False)
 
 
 ######################################## SOCKET SECURITY LAYER #######################################################
@@ -278,7 +274,9 @@ def close_connection(client_sock, conn_num, thread_id, db):
     client_sock.close()
 
     if conn_num != None:
-        db.close()
+        try:
+            db.close()
+        except: pass
         with LOCK:
             thread = ACTIVE_THREADS.get(thread_id)
             if thread:
