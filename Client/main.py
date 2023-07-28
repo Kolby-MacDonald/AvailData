@@ -75,13 +75,9 @@ class LoginPage(QDialog):
                     close_connection()
     
             except: 
-                print("Server Refused to Connect")
                 try:
                     close_connection()
                 except: pass
-            
-        else:
-            print("Enter your credentials to login.")
 
     def open_linkedin(self):
         webbrowser.open('www.linkedin.com/in/kolby-macdonald')
@@ -128,6 +124,7 @@ class UserPage(QDialog):
         self.readwrite_radioButton.clicked.connect(lambda: UserPage.readwrite_table_control(self))
         self.lastfirst_pushButton.clicked.connect(lambda: UserPage.read_order(self))
         self.commit_pushButton.clicked.connect(lambda: UserPage.commit_changes(self))
+        self.page_pushButton.clicked.connect(lambda: UserPage.request_handler(self, "update_loaded_table"))
 
         UserPage.request_handler(self, "get_init_data")
 
@@ -149,13 +146,12 @@ class UserPage(QDialog):
             elif self.lastfirst_pushButton.text() == "First":
                 result_select = self.result_select_combobox.currentText()
 
-            data = [request, self.table_select_combobox.currentText(), result_select]
+            data = [request, self.table_select_combobox.currentText(), result_select, self.pageselect_spinBox.text()]
             send_data(data)
-            table_data = receive_data()
-            UserPage.update_table_view(self, table_data)
+            data = receive_data()
+            UserPage.update_table_view(self, data)
         
         elif request == "update_database_row":
-            print("updating table row")
             data = [request, self.table_select_combobox.currentText(), self.modified_rows_list]
             send_data(data)
             response = receive_data()
@@ -175,11 +171,10 @@ class UserPage(QDialog):
             widget.removeWidget(user_window)
 
 
-
     #----------------------------------------------- CLIENT UI FUNCTIONS -------------------------------------------
 
     def get_init_data(self):
-
+        
         if self.user_write_table_names != [] or self.user_read_table_names != []:
             self.table_select_combobox.addItems(self.user_write_table_names + self.user_read_table_names)
         else:
@@ -187,9 +182,7 @@ class UserPage(QDialog):
             self.readwrite_radioButton.setEnabled(False)
             self.readwrite_radioButton.setText("No Selection")
 
-    def update_table_view(self, table_data):
-        self.loaded_table_edit.clear()
-        
+    def update_table_view(self, data):
         if self.table_select_combobox.currentText() not in self.user_write_table_names:
             self.readwrite_radioButton.setChecked(False)
             self.readwrite_radioButton.setEnabled(False)
@@ -202,12 +195,18 @@ class UserPage(QDialog):
             self.commit_pushButton.setEnabled(True)
             self.readwrite_table_control()
 
-        if table_data != []:
-            table_data = table_data[0]
+        if data != []:
+            table_data = data[0]
+            page_select = data[1]
+            total_pages = data[2]
+            self.loaded_table_edit.clear()
+            self.pageselect_spinBox.setMinimum(1)
+            self.pageselect_spinBox.setMaximum(total_pages)
+            self.pageselect_spinBox.setValue(int(page_select))
+            #table_data = table_data[0]
             df = pd.DataFrame.from_dict(table_data)
             self.original_df = df
             column_titles = list(df.columns.values)
-            print(column_titles)
             # column_titles = [str(title) for title in column_titles]
 
             self.loaded_table_edit.setColumnCount(len(df.columns))
@@ -239,9 +238,11 @@ class UserPage(QDialog):
                         if item == 'None':
                             item = ''
                         self.loaded_table_edit.setItem(row, column, QTableWidgetItem(item))
+        else:
+            self.pageselect_spinBox.setMinimum(1)
+            self.pageselect_spinBox.setMaximum(1)
 
     def commit_changes(self):
-        print("Saving Changes")
         table_data = {}
         column_titles = [self.loaded_table_edit.horizontalHeaderItem(column).text() or "" for column in range(self.loaded_table_edit.columnCount())]
 
