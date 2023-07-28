@@ -15,7 +15,7 @@ from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import padding
 from secrets import token_bytes
 
-import select
+import time
 
 ACTIVE_THREADS = {}
 TOTAL_CONNECTIONS = 0
@@ -110,6 +110,8 @@ def send_data(client_sock, aes_key, data):
 
 
 def receive_data(client_sock, aes_key, conn_num, thread_id, db, cursor, db_role, user_write_table_access, user_read_table_access):
+    comm_time = int(time.time())
+    timeout = 10
     while True:
         try:
             header = client_sock.recv(15)
@@ -126,6 +128,8 @@ def receive_data(client_sock, aes_key, conn_num, thread_id, db, cursor, db_role,
                     break
                 data += chunk
                 remaining_bytes -= len(chunk)
+            
+            comm_time = int(time.time())
 
             data = aes_decrypt(data, aes_key)
 
@@ -154,8 +158,15 @@ def receive_data(client_sock, aes_key, conn_num, thread_id, db, cursor, db_role,
 
             elif request_type == "log_out":
                 close_connection(client_sock, conn_num, thread_id, db)
+                break
         except:
             pass
+        
+        current_time = int(time.time())
+        if current_time - comm_time > timeout:
+            close_connection(client_sock, conn_num, thread_id, db)
+            break
+
 
 ######################################## DATA MANIPULATION FUNCTIONS ###################################################
 
