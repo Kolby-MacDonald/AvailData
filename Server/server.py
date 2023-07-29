@@ -246,10 +246,14 @@ def update_loaded_table(client_sock, aes_key, cursor, user_write_table_names, us
                 column_names.append(column[1])
             
             if result_select.isdigit():
-                cursor.execute(f'''SELECT * FROM {requested_table} LIMIT {int(result_select)}''')
+                cursor.execute(f'''SELECT * FROM {requested_table} LIMIT {int(result_select)} OFFSET {(int(page_select)-1)*int(result_select)}''')
 
             elif result_select.startswith("-") and result_select[1:].isdigit():
-                cursor.execute(f'''SELECT * FROM {requested_table} LIMIT {int(result_select)} OFFSET {int(result_select) + total_rows}''')
+                cursor.execute(f'''SELECT * FROM {requested_table} LIMIT {abs(int(result_select))} OFFSET {(total_rows - abs(int(result_select))) + (int(page_select)-1)*int(result_select)}''')
+
+
+
+
 
             else:
                 cursor.execute(f'''SELECT * FROM {requested_table} LIMIT 0''')
