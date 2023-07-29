@@ -186,11 +186,11 @@ class UserPage(QDialog):
         if self.table_select_combobox.currentText() not in self.user_write_table_names:
             self.readwrite_radioButton.setChecked(False)
             self.readwrite_radioButton.setEnabled(False)
-            self.readwrite_radioButton.setText("Locked Table")
+            self.readwrite_radioButton.setText("LOCKED")
             self.commit_pushButton.setEnabled(False)
             self.readwrite_table_control()
         elif self.table_select_combobox.currentText() in self.user_write_table_names:
-            self.readwrite_radioButton.setText("Edit Mode")
+            self.readwrite_radioButton.setText("EDIT")
             self.readwrite_radioButton.setEnabled(True)
             self.commit_pushButton.setEnabled(True)
             self.readwrite_table_control()

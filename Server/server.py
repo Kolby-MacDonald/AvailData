@@ -267,35 +267,28 @@ def update_loaded_table(client_sock, aes_key, cursor, user_write_table_names, us
     send_data(client_sock, aes_key, data)
 
 def update_database_row(client_sock, aes_key, cursor, table_to_update, update_data, user_write_table_name):
-    print(update_data)
-    print('here')
-    print(update_data[1])
-    row_to_update = update_data[0][0]
-    old_row_data = update_data[0][1]
-    new_row_data = update_data[0][2]
-    column_names_associated = update_data[1]
+    if table_to_update not in user_write_table_name:
+        send_data(client_sock, aes_key, False)
+        return
+    
+    try:
+        column_names_associated = update_data.pop()
+        for update_data in update_data:
+            row_to_update = update_data[0]
+            old_row_data = update_data[1]
+            new_row_data = update_data[2]
 
-
-    print(f"UPDATING TABLE: {table_to_update}\nROW: {row_to_update}\nOLD: {old_row_data}\nNEW: {new_row_data}")
-    print(user_write_table_name)
-    print(column_names_associated)
-    if table_to_update in user_write_table_name:
-        try:
             set_clauses = ', '.join([f'{col} = ?' for col in column_names_associated])
             where_clauses = ' AND '.join([f'{col} = ?' for col in column_names_associated])
             sql_query = f"UPDATE {table_to_update} SET {set_clauses} WHERE {where_clauses}"
             update_values = tuple(new_row_data + old_row_data)
-            print(set_clauses)
-            print(where_clauses)
-            print(sql_query)
-            print(update_values)
+
             cursor.execute(sql_query, update_values)
             cursor.connection.commit()
-            send_data(client_sock, aes_key, True)
-        except:
-            print("Failure to update")
-            send_data(client_sock, aes_key, False)
-    else:
+
+        send_data(client_sock, aes_key, True)
+    except Exception as e:
+        print(f"Failure to update: {e}")
         send_data(client_sock, aes_key, False)
 
 

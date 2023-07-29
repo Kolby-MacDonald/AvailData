@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1140</width>
-    <height>840</height>
+    <width>1609</width>
+    <height>1080</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -41,7 +41,7 @@ background-position: center;
    <item row="0" column="0">
     <widget class="QFrame" name="frame">
      <property name="sizePolicy">
-      <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+      <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
        <horstretch>0</horstretch>
        <verstretch>0</verstretch>
       </sizepolicy>
@@ -95,10 +95,10 @@ text-align: center;
      <widget class="QLabel" name="selected_table_label">
       <property name="geometry">
        <rect>
-        <x>20</x>
-        <y>20</y>
+        <x>0</x>
+        <y>0</y>
         <width>381</width>
-        <height>61</height>
+        <height>51</height>
        </rect>
       </property>
       <property name="font">
@@ -118,10 +118,10 @@ font-size:19px;</string>
      <widget class="QComboBox" name="table_select_combobox">
       <property name="geometry">
        <rect>
-        <x>170</x>
-        <y>30</y>
+        <x>150</x>
+        <y>10</y>
         <width>221</width>
-        <height>41</height>
+        <height>31</height>
        </rect>
       </property>
       <property name="layoutDirection">
@@ -142,10 +142,10 @@ font-size:19px;</string>
      <widget class="QLabel" name="result_select_label">
       <property name="geometry">
        <rect>
-        <x>860</x>
-        <y>20</y>
+        <x>390</x>
+        <y>0</y>
         <width>221</width>
-        <height>61</height>
+        <height>51</height>
        </rect>
       </property>
       <property name="font">
@@ -168,10 +168,10 @@ font-size:19px;</string>
      <widget class="QComboBox" name="result_select_combobox">
       <property name="geometry">
        <rect>
-        <x>870</x>
-        <y>30</y>
+        <x>400</x>
+        <y>10</y>
         <width>81</width>
-        <height>41</height>
+        <height>31</height>
        </rect>
       </property>
       <property name="font">
@@ -232,10 +232,10 @@ font-size:19px;</string>
      <widget class="QFrame" name="frame_2">
       <property name="geometry">
        <rect>
-        <x>20</x>
-        <y>100</y>
-        <width>1061</width>
-        <height>611</height>
+        <x>0</x>
+        <y>60</y>
+        <width>1101</width>
+        <height>741</height>
        </rect>
       </property>
       <property name="styleSheet">
@@ -258,10 +258,10 @@ font-size: 15px;
        </property>
        <property name="geometry">
         <rect>
-         <x>20</x>
-         <y>40</y>
-         <width>1021</width>
-         <height>551</height>
+         <x>110</x>
+         <y>50</y>
+         <width>971</width>
+         <height>671</height>
         </rect>
        </property>
        <property name="styleSheet">
@@ -348,20 +348,26 @@ QScrollBar{
        </property>
        <property name="geometry">
         <rect>
-         <x>20</x>
+         <x>10</x>
          <y>10</y>
-         <width>111</width>
-         <height>21</height>
+         <width>91</width>
+         <height>31</height>
         </rect>
        </property>
        <property name="styleSheet">
         <string notr="true">QRadioButton:enabled{
 font-size: 16px;
 border-radius: 10px;
-padding-left: 10px;
+padding-left: 20px;
 background-color: black;
 color: white;
 }
+
+QRadioButton::hover{
+background-color:blue;
+font-size: 18px;
+}
+
 
 QRadioButton::indicator {
 width: 11px;
@@ -403,7 +409,7 @@ border: 0px;
 }</string>
        </property>
        <property name="text">
-        <string>Edit Mode</string>
+        <string notr="true">EDIT</string>
        </property>
        <property name="checkable">
         <bool>true</bool>
@@ -412,21 +418,194 @@ border: 0px;
         <bool>false</bool>
        </property>
       </widget>
-      <widget class="QPushButton" name="commit_pushButton">
+      <widget class="QPushButton" name="commit_pushButton_3">
        <property name="enabled">
         <bool>true</bool>
        </property>
        <property name="geometry">
         <rect>
-         <x>140</x>
+         <x>740</x>
          <y>10</y>
          <width>81</width>
-         <height>21</height>
+         <height>31</height>
         </rect>
        </property>
        <property name="styleSheet">
         <string notr="true">QPushButton:enabled{
 border-radius: 10px;
+font-size: 16px;
+background-color: black;
+color: white;
+}
+
+
+QPushButton:disabled{
+background-color: transparent;
+color: transparent;
+}
+
+QPushButton:hover
+{
+background-color: blue;
+}</string>
+       </property>
+       <property name="text">
+        <string>SEARCH</string>
+       </property>
+      </widget>
+      <widget class="QLineEdit" name="lineEdit">
+       <property name="geometry">
+        <rect>
+         <x>340</x>
+         <y>10</y>
+         <width>421</width>
+         <height>31</height>
+        </rect>
+       </property>
+       <property name="styleSheet">
+        <string notr="true">border-radius: 10px;
+background-color: rgba(49, 51, 56,0.8);
+font-size:16px;
+padding-right: 10px;
+padding-left: 10px;</string>
+       </property>
+       <property name="text">
+        <string/>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignCenter</set>
+       </property>
+       <property name="placeholderText">
+        <string/>
+       </property>
+      </widget>
+      <widget class="QPushButton" name="commit_pushButton_2">
+       <property name="enabled">
+        <bool>true</bool>
+       </property>
+       <property name="geometry">
+        <rect>
+         <x>10</x>
+         <y>650</y>
+         <width>91</width>
+         <height>31</height>
+        </rect>
+       </property>
+       <property name="styleSheet">
+        <string notr="true">QPushButton:enabled{
+border-radius: 10px;
+font-size: 16px;
+background-color: black;
+color: green;
+}
+
+
+QPushButton:disabled{
+background-color: transparent;
+color: transparent;
+}
+
+QPushButton:hover
+{
+color: black;
+background: rgb(50, 200, 50);
+font-size:18px;
+}</string>
+       </property>
+       <property name="text">
+        <string>ADD TABLE</string>
+       </property>
+      </widget>
+      <widget class="QPushButton" name="commit_pushButton_4">
+       <property name="enabled">
+        <bool>true</bool>
+       </property>
+       <property name="geometry">
+        <rect>
+         <x>10</x>
+         <y>50</y>
+         <width>91</width>
+         <height>31</height>
+        </rect>
+       </property>
+       <property name="styleSheet">
+        <string notr="true">QPushButton:enabled{
+border-radius: 10px;
+font-size: 16px;
+background-color: black;
+color: green;
+}
+
+
+QPushButton:disabled{
+background-color: transparent;
+color: transparent;
+}
+
+QPushButton:hover
+{
+color: black;
+background: rgb(50, 200, 50);
+font-size:17px;
+}</string>
+       </property>
+       <property name="text">
+        <string>ADD COL</string>
+       </property>
+      </widget>
+      <widget class="QPushButton" name="commit_pushButton_5">
+       <property name="enabled">
+        <bool>true</bool>
+       </property>
+       <property name="geometry">
+        <rect>
+         <x>10</x>
+         <y>90</y>
+         <width>91</width>
+         <height>31</height>
+        </rect>
+       </property>
+       <property name="styleSheet">
+        <string notr="true">QPushButton:enabled{
+border-radius: 10px;
+font-size: 16px;
+background-color: black;
+color: green;
+}
+
+
+QPushButton:disabled{
+background-color: transparent;
+color: transparent;
+}
+
+QPushButton:hover
+{
+color: black;
+background: rgb(50, 200, 50);
+font-size:17px;
+}</string>
+       </property>
+       <property name="text">
+        <string>ADD ROW</string>
+       </property>
+      </widget>
+      <widget class="QPushButton" name="commit_pushButton_6">
+       <property name="enabled">
+        <bool>true</bool>
+       </property>
+       <property name="geometry">
+        <rect>
+         <x>10</x>
+         <y>130</y>
+         <width>91</width>
+         <height>31</height>
+        </rect>
+       </property>
+       <property name="styleSheet">
+        <string notr="true">QPushButton:enabled{
+border-radius: 10px;
+font-size: 16px;
 background-color: black;
 color: red;
 }
@@ -435,161 +614,153 @@ color: red;
 QPushButton:disabled{
 background-color: transparent;
 color: transparent;
+}
+
+QPushButton:hover
+{
+color: black;
+background: rgb(220, 50, 50);
+font-size:17px;
 }</string>
        </property>
        <property name="text">
-        <string>Save Changes</string>
+        <string>DEL SEL</string>
        </property>
       </widget>
-      <widget class="QSpinBox" name="pageselect_spinBox">
+      <widget class="QPushButton" name="commit_pushButton_7">
+       <property name="enabled">
+        <bool>true</bool>
+       </property>
        <property name="geometry">
         <rect>
-         <x>970</x>
-         <y>10</y>
-         <width>71</width>
-         <height>21</height>
-        </rect>
-       </property>
-       <property name="styleSheet">
-        <string notr="true">QSpinBox:enabled{
-font-size: 16px;
-border-radius: 10px;
-background-color: black;
-color: white;
-}
-
-QSpinBox:disabled{
-font-size: 16px;
-border-radius: 10px;
-background-color: black;
-color: white;
-}
-
-QSpinBox::up-button {
-  position: relative;
-  left: -5px;
-  top: 2px;
-}
-
-QSpinBox::down-button {
-  position: relative;
-  left: -5px;
-  top: -1px;
-}</string>
-       </property>
-       <property name="wrapping">
-        <bool>false</bool>
-       </property>
-       <property name="alignment">
-        <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
-       </property>
-       <property name="readOnly">
-        <bool>false</bool>
-       </property>
-       <property name="buttonSymbols">
-        <enum>QAbstractSpinBox::PlusMinus</enum>
-       </property>
-       <property name="correctionMode">
-        <enum>QAbstractSpinBox::CorrectToNearestValue</enum>
-       </property>
-       <property name="minimum">
-        <number>1</number>
-       </property>
-       <property name="maximum">
-        <number>1</number>
-       </property>
-      </widget>
-      <widget class="QLabel" name="label">
-       <property name="geometry">
-        <rect>
-         <x>920</x>
-         <y>10</y>
-         <width>81</width>
-         <height>21</height>
-        </rect>
-       </property>
-       <property name="styleSheet">
-        <string notr="true">padding-left:6px;
-border-radius:10px;</string>
-       </property>
-       <property name="text">
-        <string>Page:</string>
-       </property>
-      </widget>
-      <widget class="QPushButton" name="page_pushButton">
-       <property name="geometry">
-        <rect>
-         <x>830</x>
-         <y>10</y>
-         <width>81</width>
-         <height>23</height>
+         <x>10</x>
+         <y>690</y>
+         <width>91</width>
+         <height>31</height>
         </rect>
        </property>
        <property name="styleSheet">
         <string notr="true">QPushButton:enabled{
 border-radius: 10px;
+font-size: 16px;
 background-color: black;
 color: red;
 }
 
+
 QPushButton:disabled{
-border-radius: 10px;
-background-color: black;
-color: red;
+background-color: transparent;
+color: transparent;
 }
-</string>
+
+QPushButton:hover
+{
+color: black;
+border-radius:13px;
+background: rgb(220, 50, 50);
+font-size:18px;
+}</string>
        </property>
        <property name="text">
-        <string>Update Page</string>
+        <string>DEL TABLE</string>
+       </property>
+      </widget>
+      <widget class="QPushButton" name="commit_pushButton">
+       <property name="enabled">
+        <bool>true</bool>
+       </property>
+       <property name="geometry">
+        <rect>
+         <x>1010</x>
+         <y>10</y>
+         <width>71</width>
+         <height>31</height>
+        </rect>
+       </property>
+       <property name="styleSheet">
+        <string notr="true">QPushButton:enabled{
+border-radius: 10px;
+font-size: 16px;
+background-color: black;
+color: white;
+}
+
+
+QPushButton:disabled{
+background-color: transparent;
+color: transparent;
+}
+
+QPushButton:hover
+{
+background: rgb(50, 200, 50);
+font-size:18px;
+}</string>
+       </property>
+       <property name="text">
+        <string>SAVE</string>
+       </property>
+      </widget>
+      <widget class="QPushButton" name="commit_pushButton_10">
+       <property name="enabled">
+        <bool>true</bool>
+       </property>
+       <property name="geometry">
+        <rect>
+         <x>10</x>
+         <y>610</y>
+         <width>91</width>
+         <height>31</height>
+        </rect>
+       </property>
+       <property name="styleSheet">
+        <string notr="true">QPushButton:enabled{
+border-radius: 10px;
+font-size: 16px;
+background-color: black;
+color: white;
+}
+
+
+QPushButton:disabled{
+background-color: transparent;
+color: transparent;
+}
+
+QPushButton:hover
+{
+background-color: blue;
+font-size: 18px;
+}</string>
+       </property>
+       <property name="text">
+        <string>REFRESH</string>
        </property>
       </widget>
       <zorder>loaded_table_edit</zorder>
       <zorder>readwrite_radioButton</zorder>
+      <zorder>lineEdit</zorder>
+      <zorder>commit_pushButton_2</zorder>
+      <zorder>commit_pushButton_4</zorder>
+      <zorder>commit_pushButton_5</zorder>
+      <zorder>commit_pushButton_6</zorder>
+      <zorder>commit_pushButton_7</zorder>
       <zorder>commit_pushButton</zorder>
-      <zorder>label</zorder>
-      <zorder>pageselect_spinBox</zorder>
-      <zorder>page_pushButton</zorder>
-     </widget>
-     <widget class="QLabel" name="selected_table_label_2">
-      <property name="geometry">
-       <rect>
-        <x>20</x>
-        <y>730</y>
-        <width>1061</width>
-        <height>61</height>
-       </rect>
-      </property>
-      <property name="font">
-       <font>
-        <family>Trebuchet MS</family>
-        <pointsize>-1</pointsize>
-       </font>
-      </property>
-      <property name="layoutDirection">
-       <enum>Qt::LeftToRight</enum>
-      </property>
-      <property name="styleSheet">
-       <string notr="true">background-color: rgba(0,0,0,0.7);
-font-size:19px;</string>
-      </property>
-      <property name="text">
-       <string>Functionality Space</string>
-      </property>
-      <property name="alignment">
-       <set>Qt::AlignCenter</set>
-      </property>
+      <zorder>commit_pushButton_3</zorder>
+      <zorder>commit_pushButton_10</zorder>
      </widget>
      <widget class="QPushButton" name="logout_button">
       <property name="geometry">
        <rect>
-        <x>30</x>
-        <y>740</y>
+        <x>1000</x>
+        <y>10</y>
         <width>91</width>
-        <height>41</height>
+        <height>31</height>
        </rect>
       </property>
       <property name="styleSheet">
        <string notr="true">QPushButton{
+background-color: black;
 border-radius: 10;
 color: red;
 font-size:19px;
@@ -607,40 +778,13 @@ font-size:20px;
        <string>Log Out</string>
       </property>
      </widget>
-     <widget class="QLabel" name="title_label">
-      <property name="geometry">
-       <rect>
-        <x>410</x>
-        <y>20</y>
-        <width>431</width>
-        <height>61</height>
-       </rect>
-      </property>
-      <property name="font">
-       <font>
-        <family>Trebuchet MS</family>
-        <pointsize>-1</pointsize>
-       </font>
-      </property>
-      <property name="styleSheet">
-       <string notr="true">font-size: 38px;
-color: red;
-background-color: rgba(0,0,0,0.8);</string>
-      </property>
-      <property name="text">
-       <string>Temporary Main Page</string>
-      </property>
-      <property name="alignment">
-       <set>Qt::AlignCenter</set>
-      </property>
-     </widget>
      <widget class="QPushButton" name="lastfirst_pushButton">
       <property name="geometry">
        <rect>
-        <x>950</x>
-        <y>30</y>
+        <x>480</x>
+        <y>10</y>
         <width>51</width>
-        <height>41</height>
+        <height>31</height>
        </rect>
       </property>
       <property name="font">
@@ -651,13 +795,140 @@ background-color: rgba(0,0,0,0.8);</string>
       </property>
       <property name="styleSheet">
        <string notr="true">QPushButton{
-font-size: 19px;
+font-size: 17px;
+}
+
+QPushButton:hover{
+background-color: blue;
 }</string>
       </property>
       <property name="text">
        <string>Last</string>
       </property>
      </widget>
+     <widget class="QLabel" name="result_select_label_2">
+      <property name="geometry">
+       <rect>
+        <x>790</x>
+        <y>0</y>
+        <width>191</width>
+        <height>51</height>
+       </rect>
+      </property>
+      <property name="font">
+       <font>
+        <family>Trebuchet MS</family>
+        <pointsize>-1</pointsize>
+       </font>
+      </property>
+      <property name="styleSheet">
+       <string notr="true">background-color: rgba(0,0,0,0.8);
+font-size:19px;</string>
+      </property>
+      <property name="text">
+       <string>  Page</string>
+      </property>
+      <property name="alignment">
+       <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+      </property>
+     </widget>
+     <widget class="QSpinBox" name="pageselect_spinBox">
+      <property name="geometry">
+       <rect>
+        <x>850</x>
+        <y>10</y>
+        <width>81</width>
+        <height>31</height>
+       </rect>
+      </property>
+      <property name="styleSheet">
+       <string notr="true">font-size: 19px;
+border: 1px solid transparent;</string>
+      </property>
+      <property name="wrapping">
+       <bool>false</bool>
+      </property>
+      <property name="alignment">
+       <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+      </property>
+      <property name="readOnly">
+       <bool>false</bool>
+      </property>
+      <property name="buttonSymbols">
+       <enum>QAbstractSpinBox::PlusMinus</enum>
+      </property>
+      <property name="correctionMode">
+       <enum>QAbstractSpinBox::CorrectToNearestValue</enum>
+      </property>
+      <property name="minimum">
+       <number>1</number>
+      </property>
+      <property name="maximum">
+       <number>1</number>
+      </property>
+     </widget>
+     <widget class="QPushButton" name="page_pushButton">
+      <property name="geometry">
+       <rect>
+        <x>930</x>
+        <y>10</y>
+        <width>41</width>
+        <height>31</height>
+       </rect>
+      </property>
+      <property name="styleSheet">
+       <string notr="true">QPushButton{
+font-size: 17px;
+}
+
+QPushButton:hover{
+background-color: blue;
+}</string>
+      </property>
+      <property name="text">
+       <string>Go</string>
+      </property>
+     </widget>
+     <widget class="QLabel" name="selected_table_label_7">
+      <property name="geometry">
+       <rect>
+        <x>990</x>
+        <y>0</y>
+        <width>111</width>
+        <height>51</height>
+       </rect>
+      </property>
+      <property name="font">
+       <font>
+        <family>Trebuchet MS</family>
+        <pointsize>-1</pointsize>
+       </font>
+      </property>
+      <property name="layoutDirection">
+       <enum>Qt::LeftToRight</enum>
+      </property>
+      <property name="styleSheet">
+       <string notr="true">background-color: rgba(0,0,0,0.8);
+font-size:19px;</string>
+      </property>
+      <property name="text">
+       <string/>
+      </property>
+      <property name="alignment">
+       <set>Qt::AlignCenter</set>
+      </property>
+     </widget>
+     <zorder>selected_table_label_7</zorder>
+     <zorder>result_select_label_2</zorder>
+     <zorder>selected_table_label</zorder>
+     <zorder>result_select_label</zorder>
+     <zorder>table_select_combobox</zorder>
+     <zorder>result_select_combobox</zorder>
+     <zorder>frame_2</zorder>
+     <zorder>logout_button</zorder>
+     <zorder>lastfirst_pushButton</zorder>
+     <zorder>pageselect_spinBox</zorder>
+     <zorder>page_pushButton</zorder>
     </widget>
    </item>
   </layout>
