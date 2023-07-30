@@ -55,13 +55,11 @@ def server_controller(client_sock, conn_ip, conn_num, thread_id):
                       user_read_table_access)
     else:
         send_data(client_sock, aes_key, False)
-        print(f"{conn_ip} Failed To Connect | Username Given: {str(credentials[1])}")
         close_connection(client_sock, conn_num, thread_id, db)
 
 ######################################## KEY EXCHANGE ########################################################
 
 def key_exchange_handler(client_sock):
-
 
     aes_key = token_bytes(128//8) 
 
@@ -150,20 +148,22 @@ def receive_data(client_sock, aes_key, conn_num, thread_id, db, cursor, db_role,
                 requested_table = json_data[1]
                 result_select = json_data[2]
                 page_select = json_data[3]
-                print(requested_table)
-                print(result_select)
-                print(page_select)
                 update_loaded_table(client_sock, aes_key, cursor, user_write_table_names, user_read_table_names, requested_table, result_select, page_select)
             
             elif request_type == "update_database_row":
-                print("updating table row")
                 table_to_update = json_data[1]
                 update_data = json_data[2]
                 update_database_row(client_sock, aes_key, cursor, table_to_update, update_data, user_write_table_names)
+            
+            elif request_type == "add_column":
+                add_column()
 
             elif request_type == "log_out":
                 close_connection(client_sock, conn_num, thread_id, db)
                 break
+            
+
+
         except:
             pass
         
@@ -222,25 +222,20 @@ def update_loaded_table(client_sock, aes_key, cursor, user_write_table_names, us
     user_table_names = user_read_table_names + user_write_table_names
 
     if requested_table != "":
-        print("updating table")
         if len(user_table_names) >= 1 and requested_table in user_table_names:
             cursor.execute(f"PRAGMA table_info({requested_table})")
             columns = cursor.fetchall()
 
             cursor.execute(f"SELECT COUNT(1) FROM {requested_table};")
             total_rows = cursor.fetchone()[0]
-            print(f"total rows = {total_rows} type {type(total_rows)}")
 
             if total_rows == 0:
                 total_pages = 1
             else:
                 total_pages = abs(math.ceil(total_rows/int(result_select)))
-                print(total_pages)
                 if int(page_select) > total_pages or int(page_select) <= 0:
                     page_select = 1
                     total_pages = 1
-            
-            print(f"page select {int(page_select)}")
 
             for column in columns:
                 column_names.append(column[1])
@@ -251,10 +246,6 @@ def update_loaded_table(client_sock, aes_key, cursor, user_write_table_names, us
             elif result_select.startswith("-") and result_select[1:].isdigit():
                 cursor.execute(f'''SELECT * FROM {requested_table} LIMIT {abs(int(result_select))} OFFSET {(total_rows - abs(int(result_select))) + (int(page_select)-1)*int(result_select)}''')
 
-
-
-
-
             else:
                 cursor.execute(f'''SELECT * FROM {requested_table} LIMIT 0''')
         
@@ -263,7 +254,6 @@ def update_loaded_table(client_sock, aes_key, cursor, user_write_table_names, us
         data = [df, page_select, total_pages]
 
     else: data = []
-    print("sending data")
     send_data(client_sock, aes_key, data)
 
 def update_database_row(client_sock, aes_key, cursor, table_to_update, update_data, user_write_table_name):
@@ -290,6 +280,9 @@ def update_database_row(client_sock, aes_key, cursor, table_to_update, update_da
     except Exception as e:
         print(f"Failure to update: {e}")
         send_data(client_sock, aes_key, False)
+
+def add_column():
+    pass
 
 
 ######################################## SOCKET SECURITY LAYER #######################################################

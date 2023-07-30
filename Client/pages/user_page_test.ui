@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1609</width>
-    <height>1080</height>
+    <width>1146</width>
+    <height>840</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -418,7 +418,7 @@ border: 0px;
         <bool>false</bool>
        </property>
       </widget>
-      <widget class="QPushButton" name="commit_pushButton_3">
+      <widget class="QPushButton" name="search_pushButton">
        <property name="enabled">
         <bool>true</bool>
        </property>
@@ -453,7 +453,7 @@ background-color: blue;
         <string>SEARCH</string>
        </property>
       </widget>
-      <widget class="QLineEdit" name="lineEdit">
+      <widget class="QLineEdit" name="search_lineEdit">
        <property name="geometry">
         <rect>
          <x>340</x>
@@ -479,7 +479,7 @@ padding-left: 10px;</string>
         <string/>
        </property>
       </widget>
-      <widget class="QPushButton" name="commit_pushButton_2">
+      <widget class="QPushButton" name="addtable_pushButton">
        <property name="enabled">
         <bool>true</bool>
        </property>
@@ -516,7 +516,7 @@ font-size:18px;
         <string>ADD TABLE</string>
        </property>
       </widget>
-      <widget class="QPushButton" name="commit_pushButton_4">
+      <widget class="QPushButton" name="addcol_pushButton">
        <property name="enabled">
         <bool>true</bool>
        </property>
@@ -553,7 +553,7 @@ font-size:17px;
         <string>ADD COL</string>
        </property>
       </widget>
-      <widget class="QPushButton" name="commit_pushButton_5">
+      <widget class="QPushButton" name="addrow_pushButton">
        <property name="enabled">
         <bool>true</bool>
        </property>
@@ -590,7 +590,7 @@ font-size:17px;
         <string>ADD ROW</string>
        </property>
       </widget>
-      <widget class="QPushButton" name="commit_pushButton_6">
+      <widget class="QPushButton" name="delsel_pushButton">
        <property name="enabled">
         <bool>true</bool>
        </property>
@@ -627,7 +627,7 @@ font-size:17px;
         <string>DEL SEL</string>
        </property>
       </widget>
-      <widget class="QPushButton" name="commit_pushButton_7">
+      <widget class="QPushButton" name="deltable_pushButton">
        <property name="enabled">
         <bool>true</bool>
        </property>
@@ -701,7 +701,7 @@ font-size:18px;
         <string>SAVE</string>
        </property>
       </widget>
-      <widget class="QPushButton" name="commit_pushButton_10">
+      <widget class="QPushButton" name="refresh_pushButton">
        <property name="enabled">
         <bool>true</bool>
        </property>
@@ -739,15 +739,15 @@ font-size: 18px;
       </widget>
       <zorder>loaded_table_edit</zorder>
       <zorder>readwrite_radioButton</zorder>
-      <zorder>lineEdit</zorder>
-      <zorder>commit_pushButton_2</zorder>
-      <zorder>commit_pushButton_4</zorder>
-      <zorder>commit_pushButton_5</zorder>
-      <zorder>commit_pushButton_6</zorder>
-      <zorder>commit_pushButton_7</zorder>
+      <zorder>search_lineEdit</zorder>
+      <zorder>addtable_pushButton</zorder>
+      <zorder>addcol_pushButton</zorder>
+      <zorder>addrow_pushButton</zorder>
+      <zorder>delsel_pushButton</zorder>
+      <zorder>deltable_pushButton</zorder>
       <zorder>commit_pushButton</zorder>
-      <zorder>commit_pushButton_3</zorder>
-      <zorder>commit_pushButton_10</zorder>
+      <zorder>search_pushButton</zorder>
+      <zorder>refresh_pushButton</zorder>
      </widget>
      <widget class="QPushButton" name="logout_button">
       <property name="geometry">

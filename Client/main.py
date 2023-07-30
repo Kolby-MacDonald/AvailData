@@ -11,15 +11,13 @@ from PyQt5.QtCore import Qt
 from PyQt5 import QtWidgets
 from PyQt5.uic import loadUi
 from dotenv import load_dotenv
-from PyQt5.QtWidgets import QDialog, QApplication, QTableWidgetItem, QAbstractItemView
+from PyQt5.QtWidgets import QDialog, QApplication, QTableWidgetItem, QAbstractItemView, QMessageBox
 from Crypto.Cipher import AES
 from Crypto.Util.Padding import pad, unpad
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import padding
-
-
 
 ################################################## LOG IN CLASS #######################################################
 
@@ -113,6 +111,109 @@ class SignUpPage(QDialog):
 
 ##################################################### USER'S MAIN PAGE ################################################
 
+from PyQt5.QtWidgets import QDialog, QLabel, QLineEdit, QPushButton, QVBoxLayout, QComboBox
+
+# ... Your existing code ...
+
+class AddColumnDialog(QDialog):
+    def __init__(self):
+        super(AddColumnDialog, self).__init__()
+
+        self.setWindowTitle("[ AvailData ]")
+        self.setFixedSize(300, 350)
+
+        self.name_label = QLabel("Enter Column Name:")
+        self.name_input = QLineEdit()
+        self.name_label.setAlignment(Qt.AlignCenter)
+
+        self.data_type_label = QLabel("Select Data Type:")
+        self.data_type_combobox = QComboBox()
+        self.data_type_combobox.addItems([
+            "Text (All Characters 255)",
+            "Numbers (Integers & Decimals)",
+            "(In Beta) Blob (Images / Files)"
+            ])
+        self.data_type_label.setAlignment(Qt.AlignCenter)
+        
+        self.default_value_label = QLabel("Default Value:")
+        self.default_value_input = QLineEdit()
+        self.default_value_label.setAlignment(Qt.AlignCenter)
+
+        self.add_button = QPushButton("Confirm?")
+        self.cancel_button = QPushButton("Cancel")
+        self.add_button.clicked.connect(self.accept)
+        self.cancel_button.clicked.connect(self.reject)
+
+        layout = QVBoxLayout()
+        layout.addSpacing(5)
+        layout.addWidget(self.name_label)
+        layout.addWidget(self.name_input)
+        layout.addSpacing(10)
+        layout.addWidget(self.data_type_label)
+        layout.addWidget(self.data_type_combobox)
+        layout.addSpacing(10)
+        layout.addWidget(self.default_value_label)
+        layout.addWidget(self.default_value_input)
+        layout.addSpacing(30)
+        layout.addWidget(self.add_button)
+        layout.addWidget(self.cancel_button)
+        self.setLayout(layout)
+
+                # Apply stylesheet to customize the appearance
+        self.setStyleSheet("""
+            QDialog {
+                color: white;
+                background-color:  rgb(35, 38, 39); /* Light gray background color */
+            }
+            QLabel {
+                color: white;
+                font-size: 18px;
+            }
+            QLineEdit {
+                color: white;
+                padding: 5px;
+                border-radius: 10px;
+                background-color: rgba(0, 0, 0, 0.8);
+                font-size:16px;
+            }
+            QComboBox {
+                color: white;
+                padding: 5px;
+                font-size: 14px;
+                border-radius: 10px;
+                background-color: rgba(0, 0, 0, 0.8);
+                font-size:16px;
+            }
+            QPushButton {
+                padding: 8px;
+                background-color: #4CAF50; /* Green background color */
+                color: white; /* White text color */
+                border: none; /* Remove borders */
+                border-radius: 4px; /* Rounded borders */
+                border-radius: 10px;
+                font-size: 16px;
+                background-color: black;
+                color: green;
+            }
+
+            QPushButton:hover
+            {
+                color: black;
+                background: rgb(50, 200, 50);
+                font-size:18px;
+            }
+        """)
+
+    def get_column_name(self):
+        return self.name_input.text()
+
+    def get_data_type(self):
+        return self.data_type_combobox.currentText()
+    
+    def get_default_value(self):
+        return self.default_value_input.text()
+
+
 class UserPage(QDialog):
 
     def __init__(self):
@@ -125,10 +226,24 @@ class UserPage(QDialog):
         self.lastfirst_pushButton.clicked.connect(lambda: UserPage.read_order(self))
         self.commit_pushButton.clicked.connect(lambda: UserPage.commit_changes(self))
         self.page_pushButton.clicked.connect(lambda: UserPage.request_handler(self, "update_loaded_table"))
+        self.addcol_pushButton.clicked.connect(lambda: UserPage.add_column(self))
 
         UserPage.request_handler(self, "get_init_data")
 
     #----------------------------------------------- CLIENT REQUEST FUNCTIONS #---------------------------------------
+
+    def add_column(self):
+        dialog = AddColumnDialog()
+        if dialog.exec_() == QDialog.Accepted:
+            self.newcol_name = dialog.get_column_name()
+            self.newcol_datatype = dialog.get_data_type()
+            self.newcol_default_value = dialog.get_default_value()
+            if self.newcol_name:
+                UserPage.request_handler(self, "add_column")
+                current_columns = self.loaded_table_edit.columnCount()
+                self.loaded_table_edit.setColumnCount(current_columns + 1)
+                self.loaded_table_edit.setHorizontalHeaderItem(current_columns, QTableWidgetItem(self.newcol_name))
+
 
     def request_handler(self, request):
 
@@ -155,13 +270,9 @@ class UserPage(QDialog):
             data = [request, self.table_select_combobox.currentText(), self.modified_rows_list]
             send_data(data)
             response = receive_data()
-            if response == True:
-                self.original_df = self.current_df
-            elif response == False:
-                self.request_handler("update_loaded_table")
-            else: #unexpected response
-                self.request_handler("update_loaded_table")
-
+            if response != True:
+                QMessageBox.information(self, "Failure", "Invalid Operation Detected", QMessageBox.Ok)
+            self.request_handler("update_loaded_table")
         
         elif request == "log_out":
             self.loaded_table_edit.clear()
@@ -169,24 +280,34 @@ class UserPage(QDialog):
             user_window = self
             widget.addWidget(login_window)
             widget.removeWidget(user_window)
+        
+        elif request == "add_column":
+            data = [request, self.newcol_name, self.newcol_datatype, self.newcol_default_value]
+            send_data(data)
+            response = receive_data()
+            if response != True:
+                QMessageBox.information(self, "Failure", "Invalid Operation Detected", QMessageBox.Ok)
+            self.request_handler("update_loaded_table")
+
+
+
 
 
     #----------------------------------------------- CLIENT UI FUNCTIONS -------------------------------------------
 
     def get_init_data(self):
-        
         if self.user_write_table_names != [] or self.user_read_table_names != []:
             self.table_select_combobox.addItems(self.user_write_table_names + self.user_read_table_names)
         else:
             self.readwrite_radioButton.setChecked(False)
             self.readwrite_radioButton.setEnabled(False)
-            self.readwrite_radioButton.setText("No Selection")
+            self.readwrite_radioButton.setText(" LOCKED")
 
     def update_table_view(self, data):
         if self.table_select_combobox.currentText() not in self.user_write_table_names:
             self.readwrite_radioButton.setChecked(False)
             self.readwrite_radioButton.setEnabled(False)
-            self.readwrite_radioButton.setText("LOCKED")
+            self.readwrite_radioButton.setText(" LOCKED")
             self.commit_pushButton.setEnabled(False)
             self.readwrite_table_control()
         elif self.table_select_combobox.currentText() in self.user_write_table_names:
@@ -266,7 +387,6 @@ class UserPage(QDialog):
         # Compare the original and current lists
         if original_list != current_list:
             self.modified_rows_list = [[index+1, orig_row, curr_row] for index, (orig_row, curr_row) in enumerate(zip(original_list, current_list)) if orig_row != curr_row]
-            print(f"Modified Rows: {self.modified_rows_list}")
             self.modified_rows_list.append(self.current_df.columns.tolist())
             UserPage.request_handler(self, "update_database_row")
 
