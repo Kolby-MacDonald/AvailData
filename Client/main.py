@@ -209,6 +209,51 @@ class AddColumnDialog(QDialog):
     def get_default_value(self):
         return self.default_value_input.text()
 
+class AddRowDialog(QDialog):
+    def __init__(self):
+        super(AddRowDialog, self).__init__()
+
+        self.setWindowTitle("[ AvailData ]")
+        self.setFixedSize(300, 125)
+
+        self.name_label = QLabel("Add New Row?")
+        self.add_button = QPushButton("Confirm?")
+        self.cancel_button = QPushButton("Cancel")
+        self.add_button.clicked.connect(self.accept)
+        self.cancel_button.clicked.connect(self.reject)
+        self.name_label.setAlignment(Qt.AlignCenter)
+
+        layout = QVBoxLayout()
+        layout.addWidget(self.name_label)
+        layout.addWidget(self.add_button)
+        layout.addWidget(self.cancel_button)
+        self.setLayout(layout)
+
+                # Apply stylesheet to customize the appearance
+        self.setStyleSheet("""
+            QDialog {
+                color: white;
+                background-color:  rgb(35, 38, 39);
+            }
+            QLabel {
+                color: white;
+                font-size: 18px;
+            }
+            QPushButton {
+                padding: 8px;
+                border: none;
+                border-radius: 10px;
+                font-size: 16px;
+                background-color: black;
+                color: green;
+            }
+            QPushButton:hover
+            {
+                color: black;
+                background: rgb(50, 200, 50);
+                font-size:18px;
+            }
+        """)
 
 class UserPage(QDialog):
 
@@ -223,10 +268,31 @@ class UserPage(QDialog):
         self.commit_pushButton.clicked.connect(lambda: UserPage.commit_changes(self))
         self.page_pushButton.clicked.connect(lambda: UserPage.request_handler(self, "update_loaded_table"))
         self.addcol_pushButton.clicked.connect(lambda: UserPage.add_column(self))
+        self.addrow_pushButton.clicked.connect(lambda: UserPage.add_row(self))
+        self.refresh_pushButton.clicked.connect(lambda: UserPage.refresh_all(self))
 
         UserPage.request_handler(self, "get_init_data")
 
     #----------------------------------------------- CLIENT REQUEST FUNCTIONS #---------------------------------------
+    def refresh_all(self):
+        self.table_select_combobox.clear()
+        #self.result_select_combobox.clear()
+        self.readwrite_radioButton.setChecked(False)
+        self.readwrite_radioButton.setEnabled(True)
+        self.readwrite_radioButton.setText("EDIT")
+        self.commit_pushButton.setEnabled(True)
+        self.loaded_table_edit.clear()
+        self.pageselect_spinBox.setValue(1)
+        self.original_df = None
+        self.current_df = None
+        self.modified_rows_list = []
+        self.newcol_name = None
+        self.newcol_datatype = None
+        self.newcol_default_value = None
+        self.user_write_table_names = None
+        self.user_read_table_names = None
+        UserPage.request_handler(self, "get_init_data")
+
 
     def add_column(self):
         dialog = AddColumnDialog()
@@ -236,6 +302,11 @@ class UserPage(QDialog):
             self.newcol_default_value = dialog.get_default_value()
             if self.newcol_name:
                 UserPage.request_handler(self, "add_column")
+    
+    def add_row(self):
+        dialog = AddRowDialog()
+        if dialog.exec_() == QDialog.Accepted:
+            UserPage.request_handler(self, "add_row")
 
     def request_handler(self, request):
 
@@ -262,13 +333,22 @@ class UserPage(QDialog):
             data = [request, self.table_select_combobox.currentText(), self.modified_rows_list]
             send_data(data)
             response = receive_data()
-            if response != True:
+            if response == True:
+                self.original_df = self.current_df
+            else:
                 QMessageBox.information(self, "Failure", "Invalid Operation Detected", QMessageBox.Ok)
             self.request_handler("update_loaded_table")
         
         elif request == "add_column":
-            print("sending to add new col")
             data = [request, self.table_select_combobox.currentText(), [self.newcol_name, self.newcol_datatype, self.newcol_default_value]]
+            send_data(data)
+            response = receive_data()
+            if response != True:
+                QMessageBox.information(self, "Failure", "Invalid Operation Detected", QMessageBox.Ok)
+            self.request_handler("update_loaded_table")
+        
+        elif request == "add_row":
+            data = [request, self.table_select_combobox.currentText()]
             send_data(data)
             response = receive_data()
             if response != True:
@@ -368,16 +448,22 @@ class UserPage(QDialog):
         current_df = pd.DataFrame.from_dict(table_data)
         if self.lastfirst_pushButton.text() == "Last":
             current_df = current_df.iloc[::-1].reset_index(drop=True)
-        self.current_df = current_df.astype(self.original_df.dtypes)
+        try:
+            self.current_df = current_df.astype(self.original_df.dtypes)
 
-        original_list = self.original_df.values.tolist()
-        current_list = self.current_df.values.tolist()
+            original_list = self.original_df.values.tolist()
+            current_list = self.current_df.values.tolist()
+            #original_list = [['' if cell == None else cell for cell in row] for row in original_list]
+            #current_list = [['' if cell == None else cell for cell in row] for row in current_list]
 
-        # Compare the original and current lists
-        if original_list != current_list:
-            self.modified_rows_list = [[index+1, orig_row, curr_row] for index, (orig_row, curr_row) in enumerate(zip(original_list, current_list)) if orig_row != curr_row]
-            self.modified_rows_list.append(self.current_df.columns.tolist())
-            UserPage.request_handler(self, "update_database_row")
+            # Compare the original and current lists
+            if original_list != current_list:
+                self.modified_rows_list = [[index+1, orig_row, curr_row] for index, (orig_row, curr_row) in enumerate(zip(original_list, current_list)) if orig_row != curr_row]
+                self.modified_rows_list.append(self.current_df.columns.tolist())
+                UserPage.request_handler(self, "update_database_row")
+        except: pass
+
+        UserPage.request_handler(self, "update_loaded_table")
 
     def read_order(self):
         if self.lastfirst_pushButton.text() == "Last":

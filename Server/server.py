@@ -105,7 +105,6 @@ def send_data(client_sock, aes_key, data):
     chunks = [enc_data[i:i+chunk_size] for i in range(0, data_length, chunk_size)]
     client_sock.sendall(header)
     for chunk in chunks:
-        #client_sock.sendall(chunk.encode('utf-8'))
         client_sock.sendall(chunk)
 
 
@@ -160,11 +159,16 @@ def receive_data(client_sock, aes_key, conn_num, thread_id, db, cursor, db_role,
                 table_to_update = json_data[1]
                 update_data = json_data[2]
                 add_column(client_sock, aes_key, cursor, table_to_update, update_data, user_write_table_names)
+            
+            elif request_type == "add_row":
+                table_to_update = json_data[1]
+                add_row(client_sock, aes_key, cursor, table_to_update, user_write_table_names)
 
             elif request_type == "log_out":
                 close_connection(client_sock, conn_num, thread_id, db)
                 break
             
+
         except:
             pass
         
@@ -257,61 +261,71 @@ def update_loaded_table(client_sock, aes_key, cursor, user_write_table_names, us
     else: data = []
     send_data(client_sock, aes_key, data)
 
-def update_database_row(client_sock, aes_key, cursor, table_to_update, update_data, user_write_table_name):
-    if table_to_update not in user_write_table_name:
+def update_database_row(client_sock, aes_key, cursor, table_to_update, update_data, user_write_table_names):
+    if table_to_update not in user_write_table_names:
         send_data(client_sock, aes_key, False)
         return
     
     try:
         column_names_associated = update_data.pop()
-        for update_data in update_data:
-            old_row_data = update_data[1]
-            new_row_data = update_data[2]
+        for data in update_data:
+            old_row_data = data[1]
+            new_row_data = data[2]
 
             set_clauses = ', '.join([f'{col} = ?' for col in column_names_associated])
-            where_clauses = ' AND '.join([f'{col} = ?' for col in column_names_associated])
+            where_clauses = ' AND '.join([f'{col} IS ?' for col in column_names_associated])
+
+            # Replace Python None with SQL NULL using the database adapter's placeholder
+            update_values = tuple(new_row_data[i] if new_row_data[i] is not None else None for i in range(len(new_row_data))) + \
+                            tuple(old_row_data[i] if old_row_data[i] is not None else None for i in range(len(old_row_data)))
+
             sql_query = f"UPDATE {table_to_update} SET {set_clauses} WHERE {where_clauses}"
-            update_values = tuple(new_row_data + old_row_data)
 
             cursor.execute(sql_query, update_values)
             cursor.connection.commit()
 
         send_data(client_sock, aes_key, True)
     except Exception as e:
-        print(f"Failure to update: {e}")
         send_data(client_sock, aes_key, False)
 
-def add_column(client_sock, aes_key, cursor, table_to_update, update_data, user_write_table_name):
+def add_column(client_sock, aes_key, cursor, table_to_update, update_data, user_write_table_names):
     newcol_name = update_data[0]
     newcol_data_type = update_data[1]
     newcol_default_value = update_data[2]
     validation = False
-    if table_to_update in user_write_table_name:
+    if table_to_update in user_write_table_names:
         try:
-            if newcol_data_type == "Text (All Characters)":
-                newcol_data_type = "TEXT"
-            elif newcol_data_type == "Numbers (Integers & Decimals)":
-                newcol_data_type = "NUMERIC"
-            elif newcol_data_type == "(In Beta) Blob (Images / Files)":
-                newcol_data_type = "BLOB"
-            else:
-                newcol_data_type = "FORCE_FAILURE!"
-            
-            if newcol_default_value == "":
-                newcol_default_value = "NULL"
-            if re.match(r'^[a-zA-Z0-9_]+$', newcol_name) is not None:
-                if re.match(r'^[a-zA-Z0-9_]+$', newcol_default_value) is not None or re.match(r'^-?\d+(\.\d+)?$', newcol_default_value) is not None:
-                    #Just incase the regular expression doesn't catch an escape string for some reason.
-                    newcol_name = newcol_name.replace("'", "X")
-                    newcol_name = newcol_name.replace('"', "X")
-                    newcol_default_value = newcol_default_value.replace("'", "X")
-                    newcol_default_value = newcol_default_value.replace('"', "X")
-                    query = f"ALTER TABLE {table_to_update} ADD COLUMN '{newcol_name}' {newcol_data_type} DEFAULT {newcol_default_value};"
-                    cursor.execute(query)
-                    cursor.connection.commit()
-                    validation = True
+            if newcol_data_type in ["Text (All Characters)","Numbers (Integers & Decimals)","(In Beta) Blob (Images / Files)"]:
+                if newcol_data_type == "Text (All Characters)":
+                    newcol_data_type = "TEXT"
+                elif newcol_data_type == "Numbers (Integers & Decimals)":
+                    newcol_data_type = "NUMERIC"
+                elif newcol_data_type == "(In Beta) Blob (Images / Files)":
+                    newcol_data_type = "BLOB"
+                    
+                if re.match(r'^[a-zA-Z0-9_]+$', newcol_name) is not None:
+                    if re.match(r'^[a-zA-Z0-9_]+$', newcol_default_value) is not None or re.match(r'^-?\d+(\.\d+)?$', newcol_default_value) is not None:
+                        #Just incase the regular expression doesn't catch an escape string for some reason.
+                        newcol_name = newcol_name.replace("'", "X")
+                        newcol_name = newcol_name.replace('"', "X")
+                        newcol_default_value = newcol_default_value.replace("'", "X")
+                        newcol_default_value = newcol_default_value.replace('"', "X")
+                        query = f"ALTER TABLE {table_to_update} ADD COLUMN '{newcol_name}' {newcol_data_type} DEFAULT {newcol_default_value};"
+                        cursor.execute(query)
+                        cursor.connection.commit()
+                        validation = True
         except: pass
     send_data(client_sock, aes_key, validation)
+
+def add_row(client_sock, aes_key, cursor, table_to_update, user_write_table_names):
+    validation = False
+    if table_to_update in user_write_table_names:
+        try:
+            cursor.execute(f"INSERT INTO {table_to_update} DEFAULT VALUES")
+            validation = True
+        except: pass
+    send_data(client_sock, aes_key, validation)
+
 
 
 
