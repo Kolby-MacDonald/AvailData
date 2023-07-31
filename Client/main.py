@@ -129,7 +129,7 @@ class AddColumnDialog(QDialog):
         self.data_type_label = QLabel("Select Data Type:")
         self.data_type_combobox = QComboBox()
         self.data_type_combobox.addItems([
-            "Text (All Characters 255)",
+            "Text (All Characters)",
             "Numbers (Integers & Decimals)",
             "(In Beta) Blob (Images / Files)"
             ])
@@ -163,7 +163,7 @@ class AddColumnDialog(QDialog):
         self.setStyleSheet("""
             QDialog {
                 color: white;
-                background-color:  rgb(35, 38, 39); /* Light gray background color */
+                background-color:  rgb(35, 38, 39);
             }
             QLabel {
                 color: white;
@@ -179,17 +179,13 @@ class AddColumnDialog(QDialog):
             QComboBox {
                 color: white;
                 padding: 5px;
-                font-size: 14px;
                 border-radius: 10px;
                 background-color: rgba(0, 0, 0, 0.8);
                 font-size:16px;
             }
             QPushButton {
                 padding: 8px;
-                background-color: #4CAF50; /* Green background color */
-                color: white; /* White text color */
-                border: none; /* Remove borders */
-                border-radius: 4px; /* Rounded borders */
+                border: none;
                 border-radius: 10px;
                 font-size: 16px;
                 background-color: black;
@@ -240,10 +236,6 @@ class UserPage(QDialog):
             self.newcol_default_value = dialog.get_default_value()
             if self.newcol_name:
                 UserPage.request_handler(self, "add_column")
-                current_columns = self.loaded_table_edit.columnCount()
-                self.loaded_table_edit.setColumnCount(current_columns + 1)
-                self.loaded_table_edit.setHorizontalHeaderItem(current_columns, QTableWidgetItem(self.newcol_name))
-
 
     def request_handler(self, request):
 
@@ -274,24 +266,21 @@ class UserPage(QDialog):
                 QMessageBox.information(self, "Failure", "Invalid Operation Detected", QMessageBox.Ok)
             self.request_handler("update_loaded_table")
         
-        elif request == "log_out":
-            self.loaded_table_edit.clear()
-            close_connection()
-            user_window = self
-            widget.addWidget(login_window)
-            widget.removeWidget(user_window)
-        
         elif request == "add_column":
-            data = [request, self.newcol_name, self.newcol_datatype, self.newcol_default_value]
+            print("sending to add new col")
+            data = [request, self.table_select_combobox.currentText(), [self.newcol_name, self.newcol_datatype, self.newcol_default_value]]
             send_data(data)
             response = receive_data()
             if response != True:
                 QMessageBox.information(self, "Failure", "Invalid Operation Detected", QMessageBox.Ok)
             self.request_handler("update_loaded_table")
-
-
-
-
+        
+        elif request == "log_out":
+            self.loaded_table_edit.clear()
+            close_connection()
+            user_window = self
+            widget.addWidget(login_window)
+            widget.removeWidget(user_window) 
 
     #----------------------------------------------- CLIENT UI FUNCTIONS -------------------------------------------
 

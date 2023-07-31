@@ -17,6 +17,7 @@ from secrets import token_bytes
 
 import time
 import math
+import re
 
 ACTIVE_THREADS = {}
 TOTAL_CONNECTIONS = 0
@@ -156,14 +157,14 @@ def receive_data(client_sock, aes_key, conn_num, thread_id, db, cursor, db_role,
                 update_database_row(client_sock, aes_key, cursor, table_to_update, update_data, user_write_table_names)
             
             elif request_type == "add_column":
-                add_column()
+                table_to_update = json_data[1]
+                update_data = json_data[2]
+                add_column(client_sock, aes_key, cursor, table_to_update, update_data, user_write_table_names)
 
             elif request_type == "log_out":
                 close_connection(client_sock, conn_num, thread_id, db)
                 break
             
-
-
         except:
             pass
         
@@ -264,7 +265,6 @@ def update_database_row(client_sock, aes_key, cursor, table_to_update, update_da
     try:
         column_names_associated = update_data.pop()
         for update_data in update_data:
-            row_to_update = update_data[0]
             old_row_data = update_data[1]
             new_row_data = update_data[2]
 
@@ -281,8 +281,38 @@ def update_database_row(client_sock, aes_key, cursor, table_to_update, update_da
         print(f"Failure to update: {e}")
         send_data(client_sock, aes_key, False)
 
-def add_column():
-    pass
+def add_column(client_sock, aes_key, cursor, table_to_update, update_data, user_write_table_name):
+    newcol_name = update_data[0]
+    newcol_data_type = update_data[1]
+    newcol_default_value = update_data[2]
+    validation = False
+    if table_to_update in user_write_table_name:
+        try:
+            if newcol_data_type == "Text (All Characters)":
+                newcol_data_type = "TEXT"
+            elif newcol_data_type == "Numbers (Integers & Decimals)":
+                newcol_data_type = "NUMERIC"
+            elif newcol_data_type == "(In Beta) Blob (Images / Files)":
+                newcol_data_type = "BLOB"
+            else:
+                newcol_data_type = "FORCE_FAILURE!"
+            
+            if newcol_default_value == "":
+                newcol_default_value = "NULL"
+            if re.match(r'^[a-zA-Z0-9_]+$', newcol_name) is not None:
+                if re.match(r'^[a-zA-Z0-9_]+$', newcol_default_value) is not None or re.match(r'^-?\d+(\.\d+)?$', newcol_default_value) is not None:
+                    #Just incase the regular expression doesn't catch an escape string for some reason.
+                    newcol_name = newcol_name.replace("'", "X")
+                    newcol_name = newcol_name.replace('"', "X")
+                    newcol_default_value = newcol_default_value.replace("'", "X")
+                    newcol_default_value = newcol_default_value.replace('"', "X")
+                    query = f"ALTER TABLE {table_to_update} ADD COLUMN '{newcol_name}' {newcol_data_type} DEFAULT {newcol_default_value};"
+                    cursor.execute(query)
+                    cursor.connection.commit()
+                    validation = True
+        except: pass
+    send_data(client_sock, aes_key, validation)
+
 
 
 ######################################## SOCKET SECURITY LAYER #######################################################
