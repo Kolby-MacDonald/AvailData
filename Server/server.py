@@ -433,10 +433,12 @@ def main():
             TOTAL_CONNECTIONS += 1
             conn_num = TOTAL_CONNECTIONS
             thread = threading.Thread(target=server_controller,
-                                    args=(client_sock, addr[0], conn_num, thread_id,))
+                                    args=(client_sock, addr[0], conn_num, thread_id,))  
             ACTIVE_THREADS[thread_id] = {"thread": thread, "event": terminate_event}
             thread.start()
             print(f'''Active Clients ({len(ACTIVE_THREADS)}) | Closed Clients ({TOTAL_CONNECTIONS - len(ACTIVE_THREADS)}) | Total: ({TOTAL_CONNECTIONS}).''')
-
+        else:
+            close_connection(client_sock, None, None, None)
+            
 if __name__ == "__main__":
     main()

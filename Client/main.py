@@ -113,8 +113,6 @@ class SignUpPage(QDialog):
 
 from PyQt5.QtWidgets import QDialog, QLabel, QLineEdit, QPushButton, QVBoxLayout, QComboBox
 
-# ... Your existing code ...
-
 class AddColumnDialog(QDialog):
     def __init__(self):
         super(AddColumnDialog, self).__init__()
@@ -159,7 +157,6 @@ class AddColumnDialog(QDialog):
         layout.addWidget(self.cancel_button)
         self.setLayout(layout)
 
-                # Apply stylesheet to customize the appearance
         self.setStyleSheet("""
             QDialog {
                 color: white;
@@ -229,7 +226,6 @@ class AddRowDialog(QDialog):
         layout.addWidget(self.cancel_button)
         self.setLayout(layout)
 
-                # Apply stylesheet to customize the appearance
         self.setStyleSheet("""
             QDialog {
                 color: white;
@@ -270,13 +266,42 @@ class UserPage(QDialog):
         self.addcol_pushButton.clicked.connect(lambda: UserPage.add_column(self))
         self.addrow_pushButton.clicked.connect(lambda: UserPage.add_row(self))
         self.refresh_pushButton.clicked.connect(lambda: UserPage.refresh_all(self))
-
+        self.delsel_pushButton.clicked.connect(lambda: UserPage.delete_selected_headers(self))
         UserPage.request_handler(self, "get_init_data")
 
     #----------------------------------------------- CLIENT REQUEST FUNCTIONS #---------------------------------------
+    def delete_selected_headers(self):
+        # self.loaded_table_edit
+        selected_items = self.loaded_table_edit.selectedItems()
+        header_items = []
+
+        for selected_item in selected_items:
+            row_index = selected_item.row()
+            col_index = selected_item.column()
+
+            # Check if the selected item is in the header row (row index 0) or header column (col index 0)
+            if row_index == 0 or col_index == 0:
+                header_items.append(selected_item)
+
+        # Process the list of selected header items
+        self.del_cols = []
+        self.del_rows = []
+        if header_items:
+            for item in header_items:
+                if item.row() == 0 and item.column() == 0:
+                    pass # CALL FUNCTION TO DELETE TABLE
+                elif item.row() == 0:
+                    self.del_cols.append(self.loaded_table_edit.horizontalHeaderItem(item.column()).text())
+                elif item.column() == 0:
+                    self.del_rows.append(item.row())
+        print(f"COLS {self.del_cols}")
+        print(f"ROWS {self.del_rows}")
+                #print(f"Row: {item.row()}, Column: {item.column()}")
+
+        pass
+    
     def refresh_all(self):
         self.table_select_combobox.clear()
-        #self.result_select_combobox.clear()
         self.readwrite_radioButton.setChecked(False)
         self.readwrite_radioButton.setEnabled(True)
         self.readwrite_radioButton.setText("EDIT")
@@ -285,14 +310,15 @@ class UserPage(QDialog):
         self.pageselect_spinBox.setValue(1)
         self.original_df = None
         self.current_df = None
-        self.modified_rows_list = []
+        self.modified_rows_list = None
         self.newcol_name = None
         self.newcol_datatype = None
         self.newcol_default_value = None
         self.user_write_table_names = None
         self.user_read_table_names = None
+        self.del_cols = None
+        self.del_rows = None
         UserPage.request_handler(self, "get_init_data")
-
 
     def add_column(self):
         dialog = AddColumnDialog()
@@ -309,7 +335,6 @@ class UserPage(QDialog):
             UserPage.request_handler(self, "add_row")
 
     def request_handler(self, request):
-
         if request == "get_init_data":
             data = [request]
             send_data(data)
@@ -393,25 +418,22 @@ class UserPage(QDialog):
             self.pageselect_spinBox.setMinimum(1)
             self.pageselect_spinBox.setMaximum(total_pages)
             self.pageselect_spinBox.setValue(int(page_select))
-            #table_data = table_data[0]
             df = pd.DataFrame.from_dict(table_data)
             self.original_df = df
             column_titles = list(df.columns.values)
-            # column_titles = [str(title) for title in column_titles]
 
             self.loaded_table_edit.setColumnCount(len(df.columns))
             self.loaded_table_edit.setRowCount(len(df.index))
             self.loaded_table_edit.setHorizontalHeaderLabels(column_titles)
             self.loaded_table_edit.resizeColumnsToContents()
 
-            # Add extra 15 pixels on either side
             for column in range(self.loaded_table_edit.columnCount()):
                 width = self.loaded_table_edit.columnWidth(column)
                 self.loaded_table_edit.setColumnWidth(column, width + 30)
 
             for row in range(self.loaded_table_edit.rowCount()):
                 item = QTableWidgetItem(str(row + 1))
-                item.setTextAlignment(Qt.AlignCenter)  # Qt.AlignCenter
+                item.setTextAlignment(Qt.AlignCenter)
                 self.loaded_table_edit.setVerticalHeaderItem(row, item)
 
             if self.lastfirst_pushButton.text() == "Last":
@@ -443,20 +465,14 @@ class UserPage(QDialog):
                     text = item.text()
                     table_data.setdefault(title, []).append(text)
 
-
-
         current_df = pd.DataFrame.from_dict(table_data)
         if self.lastfirst_pushButton.text() == "Last":
             current_df = current_df.iloc[::-1].reset_index(drop=True)
         try:
             self.current_df = current_df.astype(self.original_df.dtypes)
-
             original_list = self.original_df.values.tolist()
             current_list = self.current_df.values.tolist()
-            #original_list = [['' if cell == None else cell for cell in row] for row in original_list]
-            #current_list = [['' if cell == None else cell for cell in row] for row in current_list]
 
-            # Compare the original and current lists
             if original_list != current_list:
                 self.modified_rows_list = [[index+1, orig_row, curr_row] for index, (orig_row, curr_row) in enumerate(zip(original_list, current_list)) if orig_row != curr_row]
                 self.modified_rows_list.append(self.current_df.columns.tolist())
@@ -507,9 +523,7 @@ def send_data(data):
     CLIENT.sendall(header)
 
     for chunk in chunks:
-        #CLIENT.sendall(chunk.encode('utf-8'))
         CLIENT.sendall(chunk)
-
 
 def receive_data():
     try:
@@ -536,8 +550,6 @@ def receive_data():
     except:
         pass
 
-
-
 def close_connection():
     global CLIENT
     data = ["log_out"]
@@ -545,9 +557,6 @@ def close_connection():
     CLIENT.shutdown(socket.SHUT_RDWR)
     CLIENT.close()
     CLIENT = None
-    
-    #CLIENT = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-
 
 ######################################## KEY EXCHANGE ########################################################
 
