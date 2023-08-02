@@ -28,7 +28,7 @@ def server_controller(client_sock, conn_ip, conn_num, thread_id):
     db = sqlite3.connect(f"database_container/{os.getenv('db_name')}")
     cursor = db.cursor()
     aes_key = key_exchange_handler(client_sock)
-    credentials = receive_data(client_sock, aes_key, conn_num, thread_id, None, None, None, None, None)
+    credentials = receive_data(client_sock, aes_key, conn_num, thread_id, None, None, None, None, None, None)
 
     cursor.execute(
         f"SELECT * FROM {os.getenv('db_table_name')} WHERE username = ? AND password = ?",
@@ -44,13 +44,17 @@ def server_controller(client_sock, conn_ip, conn_num, thread_id):
         username = results[4]
         user_write_table_access = results[7]
         user_read_table_access = results[8]
+        try:
+            create_table_access = results[9].lower()
+        except:
+            create_table_access = "no"
     except: pass
 
     if results:
         send_data(client_sock, aes_key, True)
         print(f"{user_db_id} | {employee_name}:{username} | {job_title}:{db_role} | has accessed the database.")
         receive_data(client_sock, aes_key, conn_num, thread_id, db, cursor, db_role, user_write_table_access,
-                      user_read_table_access)
+                      user_read_table_access, create_table_access)
     else:
         send_data(client_sock, aes_key, False)
         close_connection(client_sock, conn_num, thread_id, db)
@@ -71,7 +75,6 @@ def key_exchange_handler(client_sock):
         )
     #SEND AES KEY
     client_sock.sendall(encrypted_key)
-
     return aes_key
 
 ######################################## SERVER RESPONSE FUNCTIONS ###################################################
@@ -102,7 +105,7 @@ def send_data(client_sock, aes_key, data):
         client_sock.sendall(chunk)
 
 
-def receive_data(client_sock, aes_key, conn_num, thread_id, db, cursor, db_role, user_write_table_access, user_read_table_access):
+def receive_data(client_sock, aes_key, conn_num, thread_id, db, cursor, db_role, user_write_table_access, user_read_table_access, create_table_access):
     comm_time = int(time.time())
     timeout = 10
     while True:
@@ -126,7 +129,6 @@ def receive_data(client_sock, aes_key, conn_num, thread_id, db, cursor, db_role,
 
             data = aes_decrypt(data, aes_key)
 
-            #json_data = json.loads(data.decode('utf-8'))
             json_data = json.loads(data)
             request_type = json_data[0]
 
@@ -134,7 +136,7 @@ def receive_data(client_sock, aes_key, conn_num, thread_id, db, cursor, db_role,
                 return json_data
 
             elif request_type == "get_init_data":
-                user_table_names = init_data_response(client_sock, aes_key, cursor, db_role, user_write_table_access, user_read_table_access)
+                user_table_names = init_data_response(client_sock, aes_key, cursor, db_role, user_write_table_access, user_read_table_access, create_table_access)
                 user_write_table_names = user_table_names[0]
                 user_read_table_names = user_table_names[1]
 
@@ -184,7 +186,7 @@ def receive_data(client_sock, aes_key, conn_num, thread_id, db, cursor, db_role,
 
 ######################################## DATA MANIPULATION FUNCTIONS ###################################################
 
-def init_data_response(client_sock, aes_key, cursor, db_role, user_write_table_access, user_read_table_access):
+def init_data_response(client_sock, aes_key, cursor, db_role, user_write_table_access, user_read_table_access, create_table_access):
     cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
     database_table_names_curse = cursor.fetchall()
 
@@ -220,7 +222,7 @@ def init_data_response(client_sock, aes_key, cursor, db_role, user_write_table_a
             if table_name in database_table_names and table_name not in user_read_table_names and table_name not in user_write_table_names:
                 user_read_table_names.append(str(table_name))
 
-    data = [user_write_table_names, user_read_table_names]
+    data = [user_write_table_names, user_read_table_names, create_table_access]
     send_data(client_sock, aes_key, data)
     return user_write_table_names, user_read_table_names
 
@@ -288,7 +290,7 @@ def update_database_row(client_sock, aes_key, cursor, table_to_update, update_da
             cursor.connection.commit()
 
         send_data(client_sock, aes_key, True)
-    except Exception as e:
+    except:
         send_data(client_sock, aes_key, False)
 
 def add_column(client_sock, aes_key, cursor, table_to_update, update_data, user_write_table_names):
@@ -325,7 +327,6 @@ def delete_column(client_sock, aes_key, cursor, table_to_update, column_to_delet
     if table_to_update in user_write_table_names:
         try:
             cursor.execute(f"ALTER TABLE {table_to_update} DROP COLUMN {column_to_delete};")
-                # Commit the transaction to make the change permanent
             cursor.connection.commit()
             validation = True
         except Exception as e:
@@ -369,7 +370,6 @@ def delete_row(client_sock, aes_key, cursor, table_to_update, position_of_row, u
 ######################################## SOCKET SECURITY LAYER #######################################################
 
 def close_connection(client_sock, conn_num, thread_id, db):
-
     client_sock.shutdown(socket.SHUT_RDWR)
     client_sock.close()
 

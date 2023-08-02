@@ -413,12 +413,12 @@ class DeleteRowDialog(QDialog):
                 border-radius: 10px;
                 font-size: 16px;
                 background-color: black;
-                color: green;
+                color: red;
             }
             QPushButton:hover
             {
                 color: black;
-                background: rgb(50, 200, 50);
+                background: rgb(200, 50, 50);
                 font-size:18px;
             }
         """)
@@ -502,9 +502,10 @@ class UserPage(QDialog):
         if request == "get_init_data":
             data = [request]
             send_data(data)
-            user_table_names = receive_data()
-            self.user_write_table_names = user_table_names[0]
-            self.user_read_table_names = user_table_names[1]
+            recvd_response = receive_data()
+            self.user_write_table_names = recvd_response[0]
+            self.user_read_table_names = recvd_response[1]
+            self.create_table_access = recvd_response[2]
             UserPage.get_init_data(self)
 
         elif request == "update_loaded_table":
@@ -577,18 +578,38 @@ class UserPage(QDialog):
         else:
             self.readwrite_radioButton.setChecked(False)
             self.readwrite_radioButton.setEnabled(False)
+            self.addcol_pushButton.setEnabled(False)
+            self.delcol_pushButton.setEnabled(False)
+            self.addrow_pushButton.setEnabled(False)
+            self.delrow_pushButton.setEnabled(False)
             self.readwrite_radioButton.setText(" LOCKED")
+        
+        print(self.create_table_access)
+        if self.create_table_access == "yes" or self.create_table_access == "true":
+            self.addtable_pushButton.setEnabled(True)
+        else:
+            self.addtable_pushButton.setEnabled(False)
 
     def update_table_view(self, data):
         if self.table_select_combobox.currentText() not in self.user_write_table_names:
             self.readwrite_radioButton.setChecked(False)
             self.readwrite_radioButton.setEnabled(False)
             self.readwrite_radioButton.setText(" LOCKED")
+            self.deltable_pushButton.setEnabled(False)
+            self.addcol_pushButton.setEnabled(False)
+            self.delcol_pushButton.setEnabled(False)
+            self.addrow_pushButton.setEnabled(False)
+            self.delrow_pushButton.setEnabled(False)
             self.commit_pushButton.setEnabled(False)
             self.readwrite_table_control()
         elif self.table_select_combobox.currentText() in self.user_write_table_names:
-            self.readwrite_radioButton.setText("EDIT")
             self.readwrite_radioButton.setEnabled(True)
+            self.readwrite_radioButton.setText("EDIT")
+            self.deltable_pushButton.setEnabled(True)
+            self.addcol_pushButton.setEnabled(True)
+            self.delcol_pushButton.setEnabled(True)
+            self.addrow_pushButton.setEnabled(True)
+            self.delrow_pushButton.setEnabled(True)
             self.commit_pushButton.setEnabled(True)
             self.readwrite_table_control()
 

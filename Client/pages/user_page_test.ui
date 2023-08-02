@@ -104,7 +104,7 @@ text-align: center;
       <property name="font">
        <font>
         <family>Trebuchet MS</family>
-        <pointsize>1</pointsize>
+        <pointsize>-1</pointsize>
        </font>
       </property>
       <property name="styleSheet">
@@ -151,7 +151,7 @@ font-size:19px;</string>
       <property name="font">
        <font>
         <family>Trebuchet MS</family>
-        <pointsize>1</pointsize>
+        <pointsize>-1</pointsize>
        </font>
       </property>
       <property name="styleSheet">
@@ -177,7 +177,7 @@ font-size:19px;</string>
       <property name="font">
        <font>
         <family>Trebuchet MS</family>
-        <pointsize>1</pointsize>
+        <pointsize>-1</pointsize>
        </font>
       </property>
       <property name="layoutDirection">
@@ -344,7 +344,7 @@ QScrollBar{
       </widget>
       <widget class="QRadioButton" name="readwrite_radioButton">
        <property name="enabled">
-        <bool>true</bool>
+        <bool>false</bool>
        </property>
        <property name="geometry">
         <rect>
@@ -481,7 +481,7 @@ padding-left: 10px;</string>
       </widget>
       <widget class="QPushButton" name="addtable_pushButton">
        <property name="enabled">
-        <bool>true</bool>
+        <bool>false</bool>
        </property>
        <property name="geometry">
         <rect>
@@ -500,10 +500,13 @@ color: green;
 }
 
 
-QPushButton:disabled{
-background-color: transparent;
-color: transparent;
+QPushButton:disabled {
+border-radius: 10px;
+font-size: 16px;
+background-color: rgba(0, 0, 0, 0.5);
+color: #808080;
 }
+
 
 QPushButton:hover
 {
@@ -518,7 +521,7 @@ font-size:18px;
       </widget>
       <widget class="QPushButton" name="addcol_pushButton">
        <property name="enabled">
-        <bool>true</bool>
+        <bool>false</bool>
        </property>
        <property name="geometry">
         <rect>
@@ -537,9 +540,11 @@ color: green;
 }
 
 
-QPushButton:disabled{
-background-color: transparent;
-color: transparent;
+QPushButton:disabled {
+border-radius: 10px;
+font-size: 16px;
+background-color: rgba(0, 0, 0, 0.5);
+color: #808080;
 }
 
 QPushButton:hover
@@ -555,7 +560,7 @@ font-size:17px;
       </widget>
       <widget class="QPushButton" name="addrow_pushButton">
        <property name="enabled">
-        <bool>true</bool>
+        <bool>false</bool>
        </property>
        <property name="geometry">
         <rect>
@@ -574,9 +579,11 @@ color: green;
 }
 
 
-QPushButton:disabled{
-background-color: transparent;
-color: transparent;
+QPushButton:disabled {
+border-radius: 10px;
+font-size: 16px;
+background-color: rgba(0, 0, 0, 0.5);
+color: #808080;
 }
 
 QPushButton:hover
@@ -592,7 +599,7 @@ font-size:17px;
       </widget>
       <widget class="QPushButton" name="delrow_pushButton">
        <property name="enabled">
-        <bool>true</bool>
+        <bool>false</bool>
        </property>
        <property name="geometry">
         <rect>
@@ -611,9 +618,11 @@ color: red;
 }
 
 
-QPushButton:disabled{
-background-color: transparent;
-color: transparent;
+QPushButton:disabled {
+border-radius: 10px;
+font-size: 16px;
+background-color: rgba(0, 0, 0, 0.5);
+color: #808080;
 }
 
 QPushButton:hover
@@ -629,7 +638,7 @@ font-size:17px;
       </widget>
       <widget class="QPushButton" name="deltable_pushButton">
        <property name="enabled">
-        <bool>true</bool>
+        <bool>false</bool>
        </property>
        <property name="geometry">
         <rect>
@@ -648,11 +657,12 @@ color: red;
 }
 
 
-QPushButton:disabled{
-background-color: transparent;
-color: transparent;
+QPushButton:disabled {
+border-radius: 10px;
+font-size: 16px;
+background-color: rgba(0, 0, 0, 0.5);
+color: #808080;
 }
-
 QPushButton:hover
 {
 color: black;
@@ -667,7 +677,7 @@ font-size:18px;
       </widget>
       <widget class="QPushButton" name="commit_pushButton">
        <property name="enabled">
-        <bool>true</bool>
+        <bool>false</bool>
        </property>
        <property name="geometry">
         <rect>
@@ -686,9 +696,11 @@ color: white;
 }
 
 
-QPushButton:disabled{
-background-color: transparent;
-color: transparent;
+QPushButton:disabled {
+border-radius: 10px;
+font-size: 16px;
+background-color: rgba(0, 0, 0, 0.5);
+color: #808080;
 }
 
 QPushButton:hover
@@ -739,7 +751,7 @@ font-size: 18px;
       </widget>
       <widget class="QPushButton" name="delcol_pushButton">
        <property name="enabled">
-        <bool>true</bool>
+        <bool>false</bool>
        </property>
        <property name="geometry">
         <rect>
@@ -758,9 +770,11 @@ color: red;
 }
 
 
-QPushButton:disabled{
-background-color: transparent;
-color: transparent;
+QPushButton:disabled {
+border-radius: 10px;
+font-size: 16px;
+background-color: rgba(0, 0, 0, 0.5);
+color: #808080;
 }
 
 QPushButton:hover
@@ -828,7 +842,7 @@ font-size:20px;
       <property name="font">
        <font>
         <family>Trebuchet MS</family>
-        <pointsize>1</pointsize>
+        <pointsize>-1</pointsize>
        </font>
       </property>
       <property name="styleSheet">
@@ -856,7 +870,7 @@ background-color: blue;
       <property name="font">
        <font>
         <family>Trebuchet MS</family>
-        <pointsize>1</pointsize>
+        <pointsize>-1</pointsize>
        </font>
       </property>
       <property name="styleSheet">
@@ -939,7 +953,7 @@ background-color: blue;
       <property name="font">
        <font>
         <family>Trebuchet MS</family>
-        <pointsize>1</pointsize>
+        <pointsize>-1</pointsize>
        </font>
       </property>
       <property name="layoutDirection">
