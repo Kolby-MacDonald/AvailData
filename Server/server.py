@@ -27,11 +27,8 @@ LOCK = threading.Lock()
 def server_controller(client_sock, conn_ip, conn_num, thread_id):
     db = sqlite3.connect(f"database_container/{os.getenv('db_name')}")
     cursor = db.cursor()
-    
     aes_key = key_exchange_handler(client_sock)
-
     credentials = receive_data(client_sock, aes_key, conn_num, thread_id, None, None, None, None, None)
-
 
     cursor.execute(
         f"SELECT * FROM {os.getenv('db_table_name')} WHERE username = ? AND password = ?",
@@ -61,11 +58,8 @@ def server_controller(client_sock, conn_ip, conn_num, thread_id):
 ######################################## KEY EXCHANGE ########################################################
 
 def key_exchange_handler(client_sock):
-
     aes_key = token_bytes(128//8) 
-
     client_public_key = client_sock.recv(1024)
-    #ENCRYPT AES KEY
     client_public_key = serialization.load_pem_public_key(client_public_key)
     encrypted_key = client_public_key.encrypt(
         aes_key,
@@ -167,7 +161,8 @@ def receive_data(client_sock, aes_key, conn_num, thread_id, db, cursor, db_role,
             
             elif request_type == "add_row":
                 table_to_update = json_data[1]
-                add_row(client_sock, aes_key, cursor, table_to_update, user_write_table_names)
+                position_of_row = json_data[2]
+                add_row(client_sock, aes_key, cursor, table_to_update, position_of_row, user_write_table_names)
             
             elif request_type == "delete_row":
                 table_to_update == json_data[1]
@@ -176,7 +171,6 @@ def receive_data(client_sock, aes_key, conn_num, thread_id, db, cursor, db_role,
             elif request_type == "log_out":
                 close_connection(client_sock, conn_num, thread_id, db)
                 break
-            
 
         except:
             pass
@@ -337,16 +331,38 @@ def delete_column(client_sock, aes_key, cursor, table_to_update, column_to_delet
             print(e)
     send_data(client_sock, aes_key, validation)
 
-def add_row(client_sock, aes_key, cursor, table_to_update, user_write_table_names):
+def add_row(client_sock, aes_key, cursor, table_to_update, position_of_row, user_write_table_names):
     validation = False
     if table_to_update in user_write_table_names:
         try:
-            cursor.execute(f"INSERT INTO {table_to_update} DEFAULT VALUES")
+            cursor.execute(f"SELECT MAX(id) FROM {table_to_update}")
+            max_id = cursor.fetchone()[0]
+
+            cursor.execute(f"UPDATE {table_to_update} SET id = id + {max_id} + 1 WHERE id >= ?", (position_of_row,))
+            cursor.execute(f"INSERT INTO {table_to_update} (id) VALUES (?)", (position_of_row,))
+            cursor.execute(f"UPDATE {table_to_update} SET id = id - {max_id} WHERE id > ?", (position_of_row,))
+            cursor.connection.commit()
+
             validation = True
-        except: pass
+        except Exception as e:
+            print(e)
+            pass
+
     send_data(client_sock, aes_key, validation)
 
-def delete_row():pass
+def delete_row(client_sock, aes_key, cursor, table_to_update, position_of_row, user_write_table_names):
+    validation = False
+    if table_to_update in user_write_table_names:
+        try:
+            
+
+            validation = True
+        except Exception as e:
+            print(e)
+            pass
+    send_data(client_sock, aes_key, validation)
+    pass
+
 
 ######################################## SOCKET SECURITY LAYER #######################################################
 

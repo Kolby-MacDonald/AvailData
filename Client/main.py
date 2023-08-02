@@ -12,7 +12,7 @@ from PyQt5 import QtWidgets
 from PyQt5.uic import loadUi
 from dotenv import load_dotenv
 from PyQt5.QtWidgets import QDialog, QApplication, QTableWidgetItem, QAbstractItemView, QMessageBox, QWidget
-from PyQt5.QtWidgets import QLabel, QLineEdit, QPushButton, QVBoxLayout, QComboBox, QSpinBox
+from PyQt5.QtWidgets import QLabel, QLineEdit, QPushButton, QVBoxLayout, QComboBox, QSpinBox, QDoubleSpinBox
 from Crypto.Cipher import AES
 from Crypto.Util.Padding import pad, unpad
 from cryptography.hazmat.primitives.asymmetric import rsa
@@ -283,22 +283,29 @@ class DeleteColumnDialog(QDialog):
     def get_column_name(self):
         return self.name_input.currentText()
 
+
 class AddRowDialog(QDialog):
     def __init__(self):
         super(AddRowDialog, self).__init__()
 
         self.setWindowTitle("[ AvailData ]")
-        self.setFixedSize(300, 125)
+        self.setFixedSize(300, 200)
 
-        self.name_label = QLabel("Add New Row?")
-        self.add_button = QPushButton("Confirm?")
+        self.name_label = QLabel("Add Row at ID?")
+        self.add_button = QPushButton("Confirm")
         self.cancel_button = QPushButton("Cancel")
         self.add_button.clicked.connect(self.accept)
         self.cancel_button.clicked.connect(self.reject)
         self.name_label.setAlignment(Qt.AlignCenter)
 
+        self.double_spinbox = QDoubleSpinBox()
+        self.double_spinbox.setDecimals(0)  # Set to 0 to allow only integer values
+        self.double_spinbox.setRange(1, 1e308)  # Adjust the range within double limits
+
         layout = QVBoxLayout()
         layout.addWidget(self.name_label)
+        layout.addWidget(self.double_spinbox)
+        layout.addSpacing(20)
         layout.addWidget(self.add_button)
         layout.addWidget(self.cancel_button)
         self.setLayout(layout)
@@ -312,6 +319,23 @@ class AddRowDialog(QDialog):
                 color: white;
                 font-size: 18px;
             }
+            QDoubleSpinBox {
+                color: green;
+                padding: 5px;
+                border-radius: 10px;
+                background-color: rgba(0, 0, 0, 0.8);
+                font-size:16px;
+            }
+            QDoubleSpinBox::up-button {
+                subcontrol-origin: border;
+                subcontrol-position: top right;
+                right: 6px;
+            }
+            QDoubleSpinBox::down-button {
+                subcontrol-origin: border;
+                subcontrol-position: bottom right;
+                right: 6px;
+            }   
             QPushButton {
                 padding: 8px;
                 border: none;
@@ -328,29 +352,30 @@ class AddRowDialog(QDialog):
             }
         """)
 
+    def get_row_id(self):
+        return int(self.double_spinbox.value())
+
 class DeleteRowDialog(QDialog):
-    def __init__(self, max_value):
+    def __init__(self):
         super(DeleteRowDialog, self).__init__()
 
         self.setWindowTitle("[ AvailData ]")
         self.setFixedSize(300, 200)
 
-        self.name_label = QLabel("Enter Row To Delete:")
-        self.name_input = QSpinBox()
-        self.name_label.setAlignment(Qt.AlignCenter)
-
-        self.name_input.setMinimum(1)
-        self.name_input.setMaximum(max_value)
-
-        self.add_button = QPushButton("Confirm Delete?")
+        self.name_label = QLabel("Delete Row ID?")
+        self.add_button = QPushButton("Confirm")
         self.cancel_button = QPushButton("Cancel")
         self.add_button.clicked.connect(self.accept)
         self.cancel_button.clicked.connect(self.reject)
         self.name_label.setAlignment(Qt.AlignCenter)
 
+        self.double_spinbox = QDoubleSpinBox()
+        self.double_spinbox.setDecimals(0)  # Set to 0 to allow only integer values
+        self.double_spinbox.setRange(1, 150e308)  # Adjust the range within double limits
+
         layout = QVBoxLayout()
         layout.addWidget(self.name_label)
-        layout.addWidget(self.name_input)
+        layout.addWidget(self.double_spinbox)
         layout.addSpacing(20)
         layout.addWidget(self.add_button)
         layout.addWidget(self.cancel_button)
@@ -365,41 +390,41 @@ class DeleteRowDialog(QDialog):
                 color: white;
                 font-size: 18px;
             }
-            QPushButton {
-                padding: 8px;
-                border: none;
-                border-radius: 10px;
-                font-size: 16px;
-                background-color: black;
-                color: red;
-            }
-            QSpinBox {
+            QDoubleSpinBox {
                 color: red;
                 padding: 5px;
                 border-radius: 10px;
                 background-color: rgba(0, 0, 0, 0.8);
                 font-size:16px;
             }
-            QSpinBox::up-button {
+            QDoubleSpinBox::up-button {
                 subcontrol-origin: border;
                 subcontrol-position: top right;
                 right: 6px;
             }
-            QSpinBox::down-button {
+            QDoubleSpinBox::down-button {
                 subcontrol-origin: border;
                 subcontrol-position: bottom right;
                 right: 6px;
-            }             
+            }   
+            QPushButton {
+                padding: 8px;
+                border: none;
+                border-radius: 10px;
+                font-size: 16px;
+                background-color: black;
+                color: green;
+            }
             QPushButton:hover
             {
                 color: black;
-                background: rgb(200, 50, 50);
+                background: rgb(50, 200, 50);
                 font-size:18px;
             }
         """)
 
     def get_row_id(self):
-        return self.name_input.currentText()
+        return int(self.double_spinbox.value())
 
 class UserPage(QDialog):
 
@@ -464,11 +489,13 @@ class UserPage(QDialog):
     def add_row(self):
         dialog = AddRowDialog()
         if dialog.exec_() == QDialog.Accepted:
+            self.add_row_id = dialog.get_row_id()
             UserPage.request_handler(self, "add_row")
 
     def del_row(self):
         dialog = DeleteRowDialog(int(self.result_select_combobox.currentText()))
         if dialog.exec_() == QDialog.Accepted:
+            self.delete_row_id = dialog.get_row_id()
             print("Accepted")
         pass
 
@@ -519,7 +546,16 @@ class UserPage(QDialog):
             self.request_handler("update_loaded_table")
         
         elif request == "add_row":
-            data = [request, self.table_select_combobox.currentText()]
+            data = [request, self.table_select_combobox.currentText(), self.add_row_id]
+            print(f"data = {data}")
+            send_data(data)
+            response = receive_data()
+            if response != True:
+                QMessageBox.information(self, "Failure", "Invalid Operation Detected", QMessageBox.Ok)
+            self.request_handler("update_loaded_table")
+        
+        elif request == "delete_row":
+            data = [request, self.table_select_combobox.currentText(), self.delete_row_id]
             send_data(data)
             response = receive_data()
             if response != True:
