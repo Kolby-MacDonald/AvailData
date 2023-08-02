@@ -165,8 +165,9 @@ def receive_data(client_sock, aes_key, conn_num, thread_id, db, cursor, db_role,
                 add_row(client_sock, aes_key, cursor, table_to_update, position_of_row, user_write_table_names)
             
             elif request_type == "delete_row":
-                table_to_update == json_data[1]
-                pass
+                table_to_update = json_data[1]
+                position_of_row = json_data[2]
+                delete_row(client_sock, aes_key, cursor, table_to_update, position_of_row, user_write_table_names)
 
             elif request_type == "log_out":
                 close_connection(client_sock, conn_num, thread_id, db)
@@ -346,22 +347,23 @@ def add_row(client_sock, aes_key, cursor, table_to_update, position_of_row, user
             validation = True
         except Exception as e:
             print(e)
-            pass
 
     send_data(client_sock, aes_key, validation)
 
 def delete_row(client_sock, aes_key, cursor, table_to_update, position_of_row, user_write_table_names):
+    print("here")
     validation = False
+    
     if table_to_update in user_write_table_names:
-        try:
-            
-
+        try:          
+            cursor.execute(f"DELETE FROM {table_to_update} WHERE id = ?", (position_of_row,))
+            cursor.connection.commit()        
             validation = True
         except Exception as e:
             print(e)
-            pass
+    
     send_data(client_sock, aes_key, validation)
-    pass
+
 
 
 ######################################## SOCKET SECURITY LAYER #######################################################

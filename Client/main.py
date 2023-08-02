@@ -493,11 +493,10 @@ class UserPage(QDialog):
             UserPage.request_handler(self, "add_row")
 
     def del_row(self):
-        dialog = DeleteRowDialog(int(self.result_select_combobox.currentText()))
+        dialog = DeleteRowDialog()
         if dialog.exec_() == QDialog.Accepted:
             self.delete_row_id = dialog.get_row_id()
-            print("Accepted")
-        pass
+            UserPage.request_handler(self, "delete_row")
 
     def request_handler(self, request):
         if request == "get_init_data":
@@ -557,6 +556,7 @@ class UserPage(QDialog):
         elif request == "delete_row":
             data = [request, self.table_select_combobox.currentText(), self.delete_row_id]
             send_data(data)
+            print(data)
             response = receive_data()
             if response != True:
                 QMessageBox.information(self, "Failure", "Invalid Operation Detected", QMessageBox.Ok)
