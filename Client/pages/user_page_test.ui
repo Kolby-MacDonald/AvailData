@@ -424,7 +424,7 @@ border: 0px;
        </property>
        <property name="geometry">
         <rect>
-         <x>740</x>
+         <x>820</x>
          <y>10</y>
          <width>81</width>
          <height>31</height>
@@ -456,7 +456,7 @@ background-color: blue;
       <widget class="QLineEdit" name="search_lineEdit">
        <property name="geometry">
         <rect>
-         <x>340</x>
+         <x>420</x>
          <y>10</y>
          <width>421</width>
          <height>31</height>
@@ -522,8 +522,8 @@ font-size:18px;
        </property>
        <property name="geometry">
         <rect>
-         <x>10</x>
-         <y>50</y>
+         <x>110</x>
+         <y>10</y>
          <width>91</width>
          <height>31</height>
         </rect>
@@ -560,7 +560,7 @@ font-size:17px;
        <property name="geometry">
         <rect>
          <x>10</x>
-         <y>90</y>
+         <y>50</y>
          <width>91</width>
          <height>31</height>
         </rect>
@@ -590,14 +590,14 @@ font-size:17px;
         <string>ADD ROW</string>
        </property>
       </widget>
-      <widget class="QPushButton" name="delsel_pushButton">
+      <widget class="QPushButton" name="delrow_pushButton">
        <property name="enabled">
         <bool>true</bool>
        </property>
        <property name="geometry">
         <rect>
          <x>10</x>
-         <y>130</y>
+         <y>90</y>
          <width>91</width>
          <height>31</height>
         </rect>
@@ -624,7 +624,7 @@ font-size:17px;
 }</string>
        </property>
        <property name="text">
-        <string>DEL SEL</string>
+        <string>DEL ROW</string>
        </property>
       </widget>
       <widget class="QPushButton" name="deltable_pushButton">
@@ -737,17 +737,55 @@ font-size: 18px;
         <string>REFRESH</string>
        </property>
       </widget>
+      <widget class="QPushButton" name="delcol_pushButton">
+       <property name="enabled">
+        <bool>true</bool>
+       </property>
+       <property name="geometry">
+        <rect>
+         <x>210</x>
+         <y>10</y>
+         <width>91</width>
+         <height>31</height>
+        </rect>
+       </property>
+       <property name="styleSheet">
+        <string notr="true">QPushButton:enabled{
+border-radius: 10px;
+font-size: 16px;
+background-color: black;
+color: red;
+}
+
+
+QPushButton:disabled{
+background-color: transparent;
+color: transparent;
+}
+
+QPushButton:hover
+{
+color: black;
+background: rgb(220, 50, 50);
+font-size:17px;
+}</string>
+       </property>
+       <property name="text">
+        <string>DEL COL</string>
+       </property>
+      </widget>
       <zorder>loaded_table_edit</zorder>
       <zorder>readwrite_radioButton</zorder>
       <zorder>search_lineEdit</zorder>
       <zorder>addtable_pushButton</zorder>
       <zorder>addcol_pushButton</zorder>
       <zorder>addrow_pushButton</zorder>
-      <zorder>delsel_pushButton</zorder>
+      <zorder>delrow_pushButton</zorder>
       <zorder>deltable_pushButton</zorder>
       <zorder>commit_pushButton</zorder>
       <zorder>search_pushButton</zorder>
       <zorder>refresh_pushButton</zorder>
+      <zorder>delcol_pushButton</zorder>
      </widget>
      <widget class="QPushButton" name="logout_button">
       <property name="geometry">

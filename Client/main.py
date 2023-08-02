@@ -12,6 +12,7 @@ from PyQt5 import QtWidgets
 from PyQt5.uic import loadUi
 from dotenv import load_dotenv
 from PyQt5.QtWidgets import QDialog, QApplication, QTableWidgetItem, QAbstractItemView, QMessageBox
+from PyQt5.QtWidgets import QLabel, QLineEdit, QPushButton, QVBoxLayout, QComboBox, QSpinBox
 from Crypto.Cipher import AES
 from Crypto.Util.Padding import pad, unpad
 from cryptography.hazmat.primitives.asymmetric import rsa
@@ -111,8 +112,6 @@ class SignUpPage(QDialog):
 
 ##################################################### USER'S MAIN PAGE ################################################
 
-from PyQt5.QtWidgets import QDialog, QLabel, QLineEdit, QPushButton, QVBoxLayout, QComboBox
-
 class AddColumnDialog(QDialog):
     def __init__(self):
         super(AddColumnDialog, self).__init__()
@@ -205,6 +204,77 @@ class AddColumnDialog(QDialog):
     
     def get_default_value(self):
         return self.default_value_input.text()
+    
+class DeleteColumnDialog(QDialog):
+    def __init__(self, horizontal_headers):
+        super(DeleteColumnDialog, self).__init__()
+
+        self.setWindowTitle("[ AvailData ]")
+        self.setFixedSize(300, 200)
+
+        self.name_label = QLabel("Select Column To Delete:")
+        self.name_input = QComboBox()  # Use QComboBox instead of QLineEdit
+        self.name_label.setAlignment(Qt.AlignCenter)
+
+        # Populate the QComboBox with the values from horizontal_headers
+        self.name_input.addItems(horizontal_headers)
+
+        self.add_button = QPushButton("Confirm Delete?")
+        self.cancel_button = QPushButton("Cancel")
+        self.add_button.clicked.connect(self.accept)
+        self.cancel_button.clicked.connect(self.reject)
+
+        layout = QVBoxLayout()
+        layout.addSpacing(5)
+        layout.addWidget(self.name_label)
+        layout.addWidget(self.name_input)
+        layout.addSpacing(20)
+        layout.addWidget(self.add_button)
+        layout.addWidget(self.cancel_button)
+        self.setLayout(layout)
+
+        self.setStyleSheet("""
+            QDialog {
+                color: white;
+                background-color:  rgb(35, 38, 39);
+            }
+            QLabel {
+                color: white;
+                font-size: 18px;
+            }
+            QComboBox {
+                color: red;
+                padding: 5px;
+                border-radius: 10px;
+                background-color: rgba(0, 0, 0, 0.8);
+                font-size:16px;
+            }
+            QComboBox QAbstractItemView {
+                color: red;
+                background-color: rgba(0, 0, 0, 0.8);
+                font-size: 16px;
+                selection-background-color: rgb(200, 50, 50);
+                selection-color: black;
+            }
+            QPushButton {
+                padding: 8px;
+                border: none;
+                border-radius: 10px;
+                font-size: 16px;
+                background-color: black;
+                color: red;
+            }
+
+            QPushButton:hover
+            {
+                color: black;
+                background: rgb(200, 50, 50);
+                font-size:18px;
+            }
+        """)
+
+    def get_column_name(self):
+        return self.name_input.currentText()  # Return the selected value from the QComboBox
 
 class AddRowDialog(QDialog):
     def __init__(self):
@@ -251,6 +321,77 @@ class AddRowDialog(QDialog):
             }
         """)
 
+class DeleteRowDialog(QDialog):
+    def __init__(self, max_value):
+        super(DeleteRowDialog, self).__init__()
+
+        self.setWindowTitle("[ AvailData ]")
+        self.setFixedSize(300, 200)
+
+        self.name_label = QLabel("Enter Row To Delete:")
+        self.name_input = QSpinBox()
+        self.name_label.setAlignment(Qt.AlignCenter)
+
+        # Set the minimum and maximum values for the spinbox
+        self.name_input.setMinimum(1)
+        self.name_input.setMaximum(max_value)
+
+        self.add_button = QPushButton("Confirm Delete?")
+        self.cancel_button = QPushButton("Cancel")
+        self.add_button.clicked.connect(self.accept)
+        self.cancel_button.clicked.connect(self.reject)
+        self.name_label.setAlignment(Qt.AlignCenter)
+
+        layout = QVBoxLayout()
+        layout.addWidget(self.name_label)
+        layout.addWidget(self.name_input)
+        layout.addSpacing(20)
+        layout.addWidget(self.add_button)
+        layout.addWidget(self.cancel_button)
+        self.setLayout(layout)
+
+        self.setStyleSheet("""
+            QDialog {
+                color: white;
+                background-color:  rgb(35, 38, 39);
+            }
+            QLabel {
+                color: white;
+                font-size: 18px;
+            }
+            QPushButton {
+                padding: 8px;
+                border: none;
+                border-radius: 10px;
+                font-size: 16px;
+                background-color: black;
+                color: red;
+            }
+            QSpinBox {
+                color: red;
+                padding: 5px;
+                border-radius: 10px;
+                background-color: rgba(0, 0, 0, 0.8);
+                font-size:16px;
+            }
+            QSpinBox::up-button {
+                subcontrol-origin: border;
+                subcontrol-position: top right;
+                right: 6px;
+            }
+            QSpinBox::down-button {
+                subcontrol-origin: border;
+                subcontrol-position: bottom right;
+                right: 6px;
+            }             
+            QPushButton:hover
+            {
+                color: black;
+                background: rgb(200, 50, 50);
+                font-size:18px;
+            }
+        """)
+
 class UserPage(QDialog):
 
     def __init__(self):
@@ -264,41 +405,14 @@ class UserPage(QDialog):
         self.commit_pushButton.clicked.connect(lambda: UserPage.commit_changes(self))
         self.page_pushButton.clicked.connect(lambda: UserPage.request_handler(self, "update_loaded_table"))
         self.addcol_pushButton.clicked.connect(lambda: UserPage.add_column(self))
+        self.delcol_pushButton.clicked.connect(lambda: UserPage.del_column(self))
         self.addrow_pushButton.clicked.connect(lambda: UserPage.add_row(self))
+        self.delrow_pushButton.clicked.connect(lambda: UserPage.del_row(self))
         self.refresh_pushButton.clicked.connect(lambda: UserPage.refresh_all(self))
-        self.delsel_pushButton.clicked.connect(lambda: UserPage.delete_selected_headers(self))
         UserPage.request_handler(self, "get_init_data")
 
     #----------------------------------------------- CLIENT REQUEST FUNCTIONS #---------------------------------------
-    def delete_selected_headers(self):
-        # self.loaded_table_edit
-        selected_items = self.loaded_table_edit.selectedItems()
-        header_items = []
 
-        for selected_item in selected_items:
-            row_index = selected_item.row()
-            col_index = selected_item.column()
-
-            # Check if the selected item is in the header row (row index 0) or header column (col index 0)
-            if row_index == 0 or col_index == 0:
-                header_items.append(selected_item)
-
-        # Process the list of selected header items
-        self.del_cols = []
-        self.del_rows = []
-        if header_items:
-            for item in header_items:
-                if item.row() == 0 and item.column() == 0:
-                    pass # CALL FUNCTION TO DELETE TABLE
-                elif item.row() == 0:
-                    self.del_cols.append(self.loaded_table_edit.horizontalHeaderItem(item.column()).text())
-                elif item.column() == 0:
-                    self.del_rows.append(item.row())
-        print(f"COLS {self.del_cols}")
-        print(f"ROWS {self.del_rows}")
-                #print(f"Row: {item.row()}, Column: {item.column()}")
-
-        pass
     
     def refresh_all(self):
         self.table_select_combobox.clear()
@@ -318,6 +432,7 @@ class UserPage(QDialog):
         self.user_read_table_names = None
         self.del_cols = None
         self.del_rows = None
+        self.horizontal_headers = None
         UserPage.request_handler(self, "get_init_data")
 
     def add_column(self):
@@ -329,10 +444,22 @@ class UserPage(QDialog):
             if self.newcol_name:
                 UserPage.request_handler(self, "add_column")
     
+    def del_column(self):
+        dialog = DeleteColumnDialog(self.horizontal_headers)
+        if dialog.exec_() == QDialog.Accepted:
+            print("Accepted")
+        pass
+    
     def add_row(self):
         dialog = AddRowDialog()
         if dialog.exec_() == QDialog.Accepted:
             UserPage.request_handler(self, "add_row")
+
+    def del_row(self):
+        dialog = DeleteRowDialog(int(self.result_select_combobox.currentText()))
+        if dialog.exec_() == QDialog.Accepted:
+            print("Accepted")
+        pass
 
     def request_handler(self, request):
         if request == "get_init_data":
@@ -426,6 +553,8 @@ class UserPage(QDialog):
             self.loaded_table_edit.setRowCount(len(df.index))
             self.loaded_table_edit.setHorizontalHeaderLabels(column_titles)
             self.loaded_table_edit.resizeColumnsToContents()
+
+            self.horizontal_headers = column_titles
 
             for column in range(self.loaded_table_edit.columnCount()):
                 width = self.loaded_table_edit.columnWidth(column)
