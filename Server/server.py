@@ -160,9 +160,18 @@ def receive_data(client_sock, aes_key, conn_num, thread_id, db, cursor, db_role,
                 update_data = json_data[2]
                 add_column(client_sock, aes_key, cursor, table_to_update, update_data, user_write_table_names)
             
+            elif request_type == "delete_column":
+                table_to_update = json_data[1]
+                column_to_delete = json_data[2]
+                delete_column(client_sock, aes_key, cursor, table_to_update, column_to_delete, user_write_table_names)
+            
             elif request_type == "add_row":
                 table_to_update = json_data[1]
                 add_row(client_sock, aes_key, cursor, table_to_update, user_write_table_names)
+            
+            elif request_type == "delete_row":
+                table_to_update == json_data[1]
+                pass
 
             elif request_type == "log_out":
                 close_connection(client_sock, conn_num, thread_id, db)
@@ -219,7 +228,6 @@ def init_data_response(client_sock, aes_key, cursor, db_role, user_write_table_a
     data = [user_write_table_names, user_read_table_names]
     send_data(client_sock, aes_key, data)
     return user_write_table_names, user_read_table_names
-
 
 def update_loaded_table(client_sock, aes_key, cursor, user_write_table_names, user_read_table_names, requested_table, result_select, page_select):
     column_names = []
@@ -315,6 +323,18 @@ def add_column(client_sock, aes_key, cursor, table_to_update, update_data, user_
                         cursor.connection.commit()
                         validation = True
         except: pass
+    send_data(client_sock, aes_key, validation)
+
+def delete_column(client_sock, aes_key, cursor, table_to_update, column_to_delete, user_write_table_names):
+    validation = False
+    if table_to_update in user_write_table_names:
+        try:
+            cursor.execute(f"ALTER TABLE {table_to_update} DROP COLUMN {column_to_delete};")
+                # Commit the transaction to make the change permanent
+            cursor.connection.commit()
+            validation = True
+        except Exception as e:
+            print(e)
     send_data(client_sock, aes_key, validation)
 
 def add_row(client_sock, aes_key, cursor, table_to_update, user_write_table_names):

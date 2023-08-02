@@ -433,6 +433,7 @@ class UserPage(QDialog):
         self.del_cols = None
         self.del_rows = None
         self.horizontal_headers = None
+        self.delcol_name = None
         UserPage.request_handler(self, "get_init_data")
 
     def add_column(self):
@@ -447,8 +448,9 @@ class UserPage(QDialog):
     def del_column(self):
         dialog = DeleteColumnDialog(self.horizontal_headers)
         if dialog.exec_() == QDialog.Accepted:
-            print("Accepted")
-        pass
+            self.delcol_name = dialog.get_column_name()
+            print(self.delcol_name)
+            UserPage.request_handler(self, "delete_column")
     
     def add_row(self):
         dialog = AddRowDialog()
@@ -493,6 +495,14 @@ class UserPage(QDialog):
         
         elif request == "add_column":
             data = [request, self.table_select_combobox.currentText(), [self.newcol_name, self.newcol_datatype, self.newcol_default_value]]
+            send_data(data)
+            response = receive_data()
+            if response != True:
+                QMessageBox.information(self, "Failure", "Invalid Operation Detected", QMessageBox.Ok)
+            self.request_handler("update_loaded_table")
+        
+        elif request == "delete_column":
+            data = [request,self.table_select_combobox.currentText(), self.delcol_name]
             send_data(data)
             response = receive_data()
             if response != True:
