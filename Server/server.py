@@ -346,6 +346,8 @@ def add_row(client_sock, aes_key, cursor, table_to_update, user_write_table_name
         except: pass
     send_data(client_sock, aes_key, validation)
 
+def delete_row():pass
+
 ######################################## SOCKET SECURITY LAYER #######################################################
 
 def close_connection(client_sock, conn_num, thread_id, db):

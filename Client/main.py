@@ -11,7 +11,7 @@ from PyQt5.QtCore import Qt
 from PyQt5 import QtWidgets
 from PyQt5.uic import loadUi
 from dotenv import load_dotenv
-from PyQt5.QtWidgets import QDialog, QApplication, QTableWidgetItem, QAbstractItemView, QMessageBox
+from PyQt5.QtWidgets import QDialog, QApplication, QTableWidgetItem, QAbstractItemView, QMessageBox, QWidget
 from PyQt5.QtWidgets import QLabel, QLineEdit, QPushButton, QVBoxLayout, QComboBox, QSpinBox
 from Crypto.Cipher import AES
 from Crypto.Util.Padding import pad, unpad
@@ -23,13 +23,13 @@ from cryptography.hazmat.primitives.asymmetric import padding
 ################################################## LOG IN CLASS #######################################################
 
 class LoginPage(QDialog):
-    
     def __init__(self):
         super(LoginPage,self).__init__()
         loadUi(r'Client\pages\login_page.ui', self)
         self.login_button.clicked.connect(self.login_function)
         self.signup_button.clicked.connect(self.open_signup_page)
         self.linkedin_button.clicked.connect(self.open_linkedin)
+
 
     def login_function(self):
         username = str(self.username_line_edit.text())
@@ -90,6 +90,10 @@ class LoginPage(QDialog):
         widget.addWidget(user_window)
         widget.removeWidget(login_window)
 
+    def keyPressEvent(self, event):
+        if event.key() == Qt.Key_Escape:
+            event.ignore()
+
 ################################################## SIGN UP CLASS ######################################################
 
 class SignUpPage(QDialog): 
@@ -109,6 +113,10 @@ class SignUpPage(QDialog):
     def open_login_page(self):
         widget.addWidget(login_window)
         widget.removeWidget(signup_window)
+    
+    def keyPressEvent(self, event):
+        if event.key() == Qt.Key_Escape:
+            event.ignore()
 
 ##################################################### USER'S MAIN PAGE ################################################
 
@@ -213,10 +221,9 @@ class DeleteColumnDialog(QDialog):
         self.setFixedSize(300, 200)
 
         self.name_label = QLabel("Select Column To Delete:")
-        self.name_input = QComboBox()  # Use QComboBox instead of QLineEdit
+        self.name_input = QComboBox()
         self.name_label.setAlignment(Qt.AlignCenter)
 
-        # Populate the QComboBox with the values from horizontal_headers
         self.name_input.addItems(horizontal_headers)
 
         self.add_button = QPushButton("Confirm Delete?")
@@ -274,7 +281,7 @@ class DeleteColumnDialog(QDialog):
         """)
 
     def get_column_name(self):
-        return self.name_input.currentText()  # Return the selected value from the QComboBox
+        return self.name_input.currentText()
 
 class AddRowDialog(QDialog):
     def __init__(self):
@@ -332,7 +339,6 @@ class DeleteRowDialog(QDialog):
         self.name_input = QSpinBox()
         self.name_label.setAlignment(Qt.AlignCenter)
 
-        # Set the minimum and maximum values for the spinbox
         self.name_input.setMinimum(1)
         self.name_input.setMaximum(max_value)
 
@@ -391,6 +397,9 @@ class DeleteRowDialog(QDialog):
                 font-size:18px;
             }
         """)
+
+    def get_row_id(self):
+        return self.name_input.currentText()
 
 class UserPage(QDialog):
 
@@ -636,6 +645,10 @@ class UserPage(QDialog):
             self.loaded_table_edit.setEditTriggers(QAbstractItemView.NoEditTriggers)
             self.loaded_table_edit.setSelectionMode(QAbstractItemView.NoSelection)
             self.loaded_table_edit.clearSelection()
+    
+    def keyPressEvent(self, event):
+        if event.key() == Qt.Key_Escape:
+            event.ignore()
 
 ######################################### SEND AND RECIEVE BUFFERED DATA ########################################
 
