@@ -28,37 +28,52 @@ def server_controller(client_sock, conn_ip, conn_num, thread_id):
     db = sqlite3.connect(f"database_container/{os.getenv('db_name')}")
     cursor = db.cursor()
     aes_key = key_exchange_handler(client_sock)
-    credentials = receive_data(client_sock, aes_key, conn_num, thread_id, None, None, None, None, None, None, None, None, None)
-
-    cursor.execute(
-        f"SELECT * FROM {os.getenv('db_table_name')} WHERE username = ? AND password = ?",
-        (str(credentials[1]), str(credentials[2]))
-    )
-
     try:
-        results = cursor.fetchone()
-        user_db_id = results[0]
-        employee_name = results[1]
-        job_title = results[2]
-        db_role = results[3]
-        username = results[4]
-        password = results[5]
-        user_write_table_access = results[7]
-        user_read_table_access = results[8]
-        try:
-            create_table_access = results[9].lower()
-        except:
-            create_table_access = "no"
-    except: pass
+        exit_flag = 0
+        while exit_flag != 1:
+            response = receive_data(client_sock, aes_key, conn_num, thread_id, None, None, None, None, None, None, None, None, None)
 
-    if results:
-        send_data(client_sock, aes_key, True)
-        print(f"{user_db_id} | {employee_name}:{username} | {job_title}:{db_role} | has accessed the database.")
-        receive_data(client_sock, aes_key, conn_num, thread_id, db, cursor, db_role, user_write_table_access,
-                      user_read_table_access, create_table_access, username, password, user_db_id)
-    else:
-        send_data(client_sock, aes_key, False)
-        close_connection(client_sock, conn_num, thread_id, db)
+            if response[0] == "login":
+                credentials = response[1]
+                cursor.execute(
+                    f"SELECT * FROM {os.getenv('db_table_name')} WHERE username = ? AND password = ?",
+                    (str(credentials[1]), str(credentials[2]))
+                )
+
+                try:
+                    results = cursor.fetchone()
+                    user_db_id = results[0]
+                    username = results[1]
+                    password = results[2]
+                    db_role = results[3]
+                    user_write_table_access = results[4]
+                    user_read_table_access = results[5]
+                    create_table_access = results[6]
+                    employee_name = results[7]
+                    job_title = results[8]
+                    email = results[9]
+                    try: create_table_access.lower()
+                    except: pass
+                except: pass
+
+                if results:
+                    if db_role.lower() == "admin" or db_role.lower() == "user":
+                        send_data(client_sock, aes_key, True)
+                        print(f"{user_db_id} | {employee_name}:{username} | {job_title}:{db_role} | has accessed the database.")
+                        receive_data(client_sock, aes_key, conn_num, thread_id, db, cursor, db_role, user_write_table_access,
+                                    user_read_table_access, create_table_access, username, password, user_db_id)
+                        exit_flag == 1
+                    else:
+                        send_data(client_sock, aes_key, False)
+                        close_connection(client_sock, conn_num, thread_id, db)
+                else:
+                    send_data(client_sock, aes_key, False)
+                    close_connection(client_sock, conn_num, thread_id, db)
+
+            elif response[0] == "sign_up":
+                validate_sign_up(client_sock, aes_key, cursor, response[1][1])
+            
+    except: pass
 
 ######################################## KEY EXCHANGE ########################################################
 
@@ -77,6 +92,36 @@ def key_exchange_handler(client_sock):
     #SEND AES KEY
     client_sock.sendall(encrypted_key)
     return aes_key
+
+
+
+######################################## USER SIGNUP FUNCTION #######################################################
+
+def validate_sign_up(client_sock, aes_key, cursor, req_credentials):
+    validation = False
+    try:
+        username = req_credentials[0]
+        email = req_credentials[1]
+        password = req_credentials[2]
+        cursor.execute(f"""SELECT CASE WHEN EXISTS (SELECT 1 FROM {os.getenv('db_table_name')} WHERE username = ?) THEN 1 ELSE 0 END;""", (username,))
+        username_test = cursor.fetchone()[0]
+        cursor.execute(f"""SELECT CASE WHEN EXISTS (SELECT 1 FROM {os.getenv('db_table_name')} WHERE email = ?) THEN 1 ELSE 0 END;""", (email,))
+        email_result = cursor.fetchone()[0]
+        email_test = 1
+        if re.match(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', email) is not None and email_result != 1:
+            email_test = 0
+        if username_test == 1 or username == "" or username == " ":
+            validation = "username"
+        elif email_test == 1:
+            validation = "email"
+        else:
+            cursor.execute(f'''INSERT INTO {os.getenv('db_table_name')} (username, password, email, database_role) VALUES (?, ?, ?, ?)''', (username, password, email, "signed_up"))
+            # Commit the transaction
+            cursor.connection.commit()
+            validation = True
+    except: pass
+    send_data(client_sock, aes_key, validation)
+    
 
 ######################################## SERVER RESPONSE FUNCTIONS ###################################################
 
@@ -105,7 +150,7 @@ def send_data(client_sock, aes_key, data):
 
 def receive_data(client_sock, aes_key, conn_num, thread_id, db, cursor, db_role, user_write_table_access, user_read_table_access, create_table_access, username, password, user_db_id):
     comm_time = int(time.time())
-    timeout = 10
+    timeout = 3
     while True:
         try:
             header = client_sock.recv(15)
@@ -128,8 +173,8 @@ def receive_data(client_sock, aes_key, conn_num, thread_id, db, cursor, db_role,
             json_data = json.loads(data)
             request_type = json_data[0]
 
-            if request_type == "login":
-                return json_data
+            if request_type == "login" or request_type == "sign_up":
+                return [request_type, json_data]
 
             elif request_type == "get_init_data":
                 user_table_names = init_data_response(client_sock, aes_key, cursor, db_role, user_read_table_access, create_table_access, username, password, user_db_id)
@@ -299,7 +344,6 @@ def add_column(client_sock, aes_key, cursor, table_to_update, update_data, user_
     newcol_data_type = update_data[1]
     newcol_default_value = update_data[2]
     validation = False
-    print(f"DEFAULT|{newcol_default_value}|")
     if table_to_update in user_write_table_names:
         try:
             if newcol_data_type in ["Text (All Characters)","Numbers (Integers & Decimals)","(In Beta) Blob (Images / Files)"]:
@@ -333,8 +377,7 @@ def delete_column(client_sock, aes_key, cursor, table_to_update, column_to_delet
             cursor.execute(f"ALTER TABLE {table_to_update} DROP COLUMN {column_to_delete};")
             cursor.connection.commit()
             validation = True
-        except Exception as e:
-            print(e)
+        except: pass
     send_data(client_sock, aes_key, validation)
 
 def add_row(client_sock, aes_key, cursor, table_to_update, position_of_row, user_write_table_names):
@@ -352,8 +395,7 @@ def add_row(client_sock, aes_key, cursor, table_to_update, position_of_row, user
             except: pass
             cursor.connection.commit()
             validation = True
-        except Exception as e:
-            print(e)
+        except: pass
 
     send_data(client_sock, aes_key, validation)
 
@@ -364,16 +406,11 @@ def delete_row(client_sock, aes_key, cursor, table_to_update, position_of_row, u
             cursor.execute(f"DELETE FROM {table_to_update} WHERE id = ?", (position_of_row,))
             cursor.connection.commit()        
             validation = True
-        except Exception as e:
-            print(e)
+        except: pass
     send_data(client_sock, aes_key, validation)
 
 def add_table(client_sock, aes_key, cursor, new_table_name, create_table_access, username, password, user_db_id, db_role):
     validation = False
-    print(new_table_name)
-    print(username)
-    print(password)
-    print(user_db_id)
     try:
         if create_table_access == "yes":
             cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
@@ -400,7 +437,6 @@ def add_table(client_sock, aes_key, cursor, new_table_name, create_table_access,
 def delete_table(client_sock, aes_key, cursor, del_table_data, user_write_table_names, password):
     validation = False
     try:
-        print("Attempting to delete")
         safe_tables =  ['sqlite_master', 'sqlite_sequence', 'sqlite_stat', 'sqlite_temp_master', str(os.getenv('db_table_name')), str(os.getenv('db_firewall_name'))]
         del_table_name = del_table_data[0]
         attempted_pass = del_table_data[1]
@@ -415,6 +451,7 @@ def delete_table(client_sock, aes_key, cursor, del_table_data, user_write_table_
 ######################################## SOCKET SECURITY LAYER #######################################################
 
 def close_connection(client_sock, conn_num, thread_id, db):
+
     client_sock.shutdown(socket.SHUT_RDWR)
     client_sock.close()
 
@@ -426,12 +463,10 @@ def close_connection(client_sock, conn_num, thread_id, db):
             thread = ACTIVE_THREADS.get(thread_id)
             if thread:
                 del ACTIVE_THREADS[thread_id]
-                print(f"Closing Connection: ({conn_num}) | Current Thread ({thread_id})")
                 if thread["thread"] != threading.current_thread():  # Skip joining the current thread
                     thread["event"].set()
                     thread["thread"].join()
-            else:
-                print(f"Thread {thread_id} does not exist.")
+            else:pass
 
     print(f"Connection {conn_num} closed.")
 

@@ -19,6 +19,8 @@ from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import padding
 from PyQt5.QtWidgets import QDialog, QApplication, QTableWidgetItem, QAbstractItemView, QMessageBox, QWidget, QLabel, QLineEdit, QPushButton, QVBoxLayout, QComboBox, QSpinBox, QDoubleSpinBox
 
+CONNECTION_STATUS = False
+
 ################################################## LOG IN CLASS #######################################################
 
 class LoginPage(QDialog):
@@ -29,37 +31,18 @@ class LoginPage(QDialog):
         self.signup_button.clicked.connect(self.open_signup_page)
         self.linkedin_button.clicked.connect(self.open_linkedin)
 
-
     def login_function(self):
+        global CONNECTION_STATUS
         username = str(self.username_line_edit.text())
         password = str(self.password_line_edit.text())
         enc_password = hashlib.sha256(password.encode()).hexdigest()
-        
-        self.username_line_edit.setText("")
-        self.password_line_edit.setText("")
+        self.username_line_edit.clear()
+        self.password_line_edit.clear()
 
         if username != "" and password !="":
-            global CLIENT, AES_KEY
-            CLIENT = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            if CONNECTION_STATUS != True:
+                attempt_to_connect()
             try:
-                # WRAP SOCKET IN SSL
-                context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
-                if str(os.getenv("ca_cert_required")) == "True": 
-                    cert_file = str(os.getenv("ca_cert_file"))
-                    key_file =  str(os.getenv("ca_key_file"))
-                    context.load_cert_chain(certfile=cert_file, keyfile=key_file)
-                    CLIENT.connect((os.getenv("pub_ip"), int(os.getenv("pub_port"))))
-                    context.load_verify_locations(str(os.getenv("ca_verify_file")))
-                else:
-                    cert_file = str(os.getenv("gen_cert_file"))
-                    key_file =  str(os.getenv("gen_key_file"))
-                    generate_ssl_certificate(cert_file, key_file)
-                    context.load_cert_chain(certfile=cert_file, keyfile=key_file)
-                    context.verify_mode = ssl.CERT_NONE
-                    CLIENT = context.wrap_socket(CLIENT)
-                    CLIENT.connect((os.getenv("pub_ip"), int(os.getenv("pub_port"))))
-
-                AES_KEY = key_exchange_handler()
                 data = ["login", username, enc_password]
                 send_data(data)
                 response = receive_data()
@@ -67,7 +50,8 @@ class LoginPage(QDialog):
                 if response == True:
                     self.open_user_page()
                 else:
-                    close_connection()
+                    CONNECTION_STATUS = False
+                    #close_connection()
             except: 
                 try:
                     close_connection()
@@ -77,6 +61,8 @@ class LoginPage(QDialog):
         webbrowser.open('www.linkedin.com/in/kolby-macdonald')
 
     def open_signup_page(self):
+        self.username_line_edit.setText("")
+        self.password_line_edit.setText("")
         widget.removeWidget(login_window)
         widget.addWidget(signup_window)
 
@@ -99,13 +85,52 @@ class SignUpPage(QDialog):
         self.return_button.clicked.connect(self.open_login_page)
 
     def signup_function(self):
-        username = self.username_line_edit.text()
-        email = self.email_line_edit.text()
+
         password = self.password_line_edit.text()
         confirm_password = self.confirm_password_line_edit.text()
-        print(f"username = {username} | email = {email} | password = {password} | confirm_password = {confirm_password}")
+
+        if self.password_line_edit.text() == confirm_password:
+            pass_checksum = 0
+            if not any(char in '!@#$%^&*()_+[]{}|;:,.<>?/~`"\'\\' for char in password):
+                pass_checksum += 1
+                pass_error = "Password must contain a special character."
+            if not any(char.isdigit() for char in password):
+                pass_checksum += 1
+                pass_error = "Password must contain a number."
+            if not any(char.isupper() for char in password):
+                pass_checksum += 1
+                pass_error = "Password must contain an upper case letter"
+            if not any(char.islower() for char in password):
+                pass_checksum += 1
+                pass_error = "Password must contain a lower case letter."
+            if len(password) < 8:
+                pass_checksum += 1
+                pass_error = "Password must be at least 8 characters long."
+            
+            if pass_checksum == 0:
+                if CONNECTION_STATUS != True:
+                    attempt_to_connect()
+                data = ["sign_up", [self.username_line_edit.text(), self.email_line_edit.text(), hashlib.sha256(password.encode()).hexdigest() ]]
+                send_data(data)
+                response = receive_data()
+
+                if response == "username":
+                    QMessageBox.information(self, "Failure", "Username Taken", QMessageBox.Ok)
+                elif response == "email":
+                    QMessageBox.information(self, "Failure", "Invalid Email", QMessageBox.Ok)
+                elif response == True:
+                    QMessageBox.information(self, "Success", "Wait For Admin Approval To Gain Access", QMessageBox.Ok)
+                    self.open_login_page()
+                else:
+                    QMessageBox.information(self, "Failure", "Invalid Operation", QMessageBox.Ok)
+            else:QMessageBox.information(self, "Failure", pass_error, QMessageBox.Ok)
+        else: QMessageBox.information(self, "Failure", "Passwords Don't Match", QMessageBox.Ok)
     
     def open_login_page(self):
+        self.username_line_edit.clear()
+        self.email_line_edit.clear()
+        self.password_line_edit.clear()
+        self.confirm_password_line_edit.clear()
         widget.addWidget(login_window)
         widget.removeWidget(signup_window)
     
@@ -113,7 +138,7 @@ class SignUpPage(QDialog):
         if event.key() == Qt.Key_Escape:
             event.ignore()
 
-##################################################### USER'S MAIN PAGE ################################################
+##################################################### USER'S MAIN PAGE CLASSES ################################################
 
 class AddColumnDialog(QDialog):
     def __init__(self):
@@ -884,8 +909,6 @@ class UserPage(QDialog):
                     break
             
             self.loaded_table_edit.setRowHidden(row, row_hidden)
-
-
     
     def clear_search(self):
         for row in range(self.loaded_table_edit.rowCount()):
@@ -987,12 +1010,15 @@ def receive_data():
         pass
 
 def close_connection():
-    global CLIENT
-    data = ["log_out"]
-    send_data(data)
+    global CLIENT, CONNECTION_STATUS
+    try:
+        data = ["log_out"]
+        send_data(data)
+    except: pass
     CLIENT.shutdown(socket.SHUT_RDWR)
     CLIENT.close()
     CLIENT = None
+    CONNECTION_STATUS = False
 
 ######################################## KEY EXCHANGE ########################################################
 
@@ -1027,7 +1053,6 @@ def key_exchange_handler():
     
 
 ######################################### SECURE SOCKET LAYER ########################################################
-
 def generate_ssl_certificate(cert_file, key_file):
     # Create a new key pair
     key = crypto.PKey()
@@ -1052,6 +1077,31 @@ def generate_ssl_certificate(cert_file, key_file):
 
     return(cert_file, key_file)
 
+def attempt_to_connect():
+    global CLIENT, AES_KEY, CONNECTION_STATUS
+    CLIENT = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    if CONNECTION_STATUS != True:
+        try:
+            # WRAP SOCKET IN SSL
+            context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
+            if str(os.getenv("ca_cert_required")) == "True": 
+                cert_file = str(os.getenv("ca_cert_file"))
+                key_file =  str(os.getenv("ca_key_file"))
+                context.load_cert_chain(certfile=cert_file, keyfile=key_file)
+                CLIENT.connect((os.getenv("pub_ip"), int(os.getenv("pub_port"))))
+                context.load_verify_locations(str(os.getenv("ca_verify_file")))
+            else:
+                cert_file = str(os.getenv("gen_cert_file"))
+                key_file =  str(os.getenv("gen_key_file"))
+                generate_ssl_certificate(cert_file, key_file)
+                context.load_cert_chain(certfile=cert_file, keyfile=key_file)
+                context.verify_mode = ssl.CERT_NONE
+                CLIENT = context.wrap_socket(CLIENT)
+                CLIENT.connect((os.getenv("pub_ip"), int(os.getenv("pub_port"))))
+
+            AES_KEY = key_exchange_handler()
+            CONNECTION_STATUS = True
+        except:pass
 ######################################### MAIN STARTUP SCRIPT #########################################################
 
 load_dotenv()
