@@ -315,7 +315,6 @@ def add_column(client_sock, aes_key, cursor, table_to_update, update_data, user_
                 
                 if re.match(r'^[a-zA-Z0-9_]+$', newcol_name) is not None:
                     if re.match(r'^[a-zA-Z0-9_]+$', newcol_default_value) is not None or re.match(r'^-?\d+(\.\d+)?$', newcol_default_value) is not None or newcol_default_value == 'NULL':
-                        #Just incase the regular expression doesn't catch an escape string for some reason.
                         newcol_name = newcol_name.replace("'", "X")
                         newcol_name = newcol_name.replace('"', "X")
                         newcol_default_value = newcol_default_value.replace("'", "X")

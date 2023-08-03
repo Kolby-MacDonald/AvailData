@@ -589,72 +589,11 @@ class UserPage(QDialog):
         self.addrow_pushButton.clicked.connect(lambda: UserPage.add_row(self))
         self.delrow_pushButton.clicked.connect(lambda: UserPage.del_row(self))
         self.refresh_pushButton.clicked.connect(lambda: UserPage.refresh_all(self))
+        self.search_pushButton.clicked.connect(lambda: UserPage.search_toggler(self))
         UserPage.refresh_all(self)
 
     #----------------------------------------------- CLIENT REQUEST FUNCTIONS #---------------------------------------
-    def add_table(self):
-        dialog = AddTableDialog()
-        if dialog.exec_() == QDialog.Accepted:
-            self.newtable_name = dialog.get_table_name()
-            UserPage.request_handler(self, "add_table")
     
-    def del_table(self):
-        if self.table_select_combobox.currentText() in self.user_write_table_names:
-            dialog = DeleteTableDialog(self.table_select_combobox.currentText())
-            if dialog.exec_() == QDialog.Accepted:
-                self.deltable_request = [dialog.get_table_name(), dialog.get_pass_input()]
-                UserPage.request_handler(self, "delete_table")
-    
-    def refresh_all(self):
-        self.table_select_combobox.clear()
-        self.readwrite_radioButton.setChecked(False)
-        self.readwrite_radioButton.setEnabled(True)
-        self.readwrite_radioButton.setText("EDIT")
-        self.commit_pushButton.setEnabled(True)
-        self.loaded_table_edit.clear()
-        self.pageselect_spinBox.setValue(1)
-        self.original_df = None
-        self.current_df = None
-        self.modified_rows_list = None
-        self.newcol_name = None
-        self.newcol_datatype = None
-        self.newcol_default_value = None
-        self.del_cols = None
-        self.del_rows = None
-        self.horizontal_headers = None
-        self.delcol_name = None
-        self.newtable_name = None
-        self.user_write_table_names = None
-        self.user_read_table_names = None
-        self.deltable_request = None
-        UserPage.request_handler(self, "get_init_data")
-
-    def add_column(self):
-        dialog = AddColumnDialog()
-        if dialog.exec_() == QDialog.Accepted:
-            self.newcol_name = dialog.get_column_name()
-            self.newcol_datatype = dialog.get_data_type()
-            self.newcol_default_value = dialog.get_default_value()
-            UserPage.request_handler(self, "add_column")
-    
-    def del_column(self):
-        dialog = DeleteColumnDialog(self.horizontal_headers)
-        if dialog.exec_() == QDialog.Accepted:
-            self.delcol_name = dialog.get_column_name()
-            UserPage.request_handler(self, "delete_column")
-    
-    def add_row(self):
-        dialog = AddRowDialog()
-        if dialog.exec_() == QDialog.Accepted:
-            self.add_row_id = dialog.get_row_id()
-            UserPage.request_handler(self, "add_row")
-
-    def del_row(self):
-        dialog = DeleteRowDialog()
-        if dialog.exec_() == QDialog.Accepted:
-            self.delete_row_id = dialog.get_row_id()
-            UserPage.request_handler(self, "delete_row")
-
     def request_handler(self, request):
         if request == "get_init_data":
             data = [request]
@@ -838,6 +777,71 @@ class UserPage(QDialog):
         else:
             self.pageselect_spinBox.setMinimum(1)
             self.pageselect_spinBox.setMaximum(1)
+        
+        UserPage.search_toggler(self)
+
+    def refresh_all(self):
+        self.table_select_combobox.clear()
+        self.readwrite_radioButton.setChecked(False)
+        self.readwrite_radioButton.setEnabled(True)
+        self.readwrite_radioButton.setText("EDIT")
+        self.commit_pushButton.setEnabled(True)
+        self.loaded_table_edit.clear()
+        self.pageselect_spinBox.setValue(1)
+        self.original_df = None
+        self.current_df = None
+        self.modified_rows_list = None
+        self.newcol_name = None
+        self.newcol_datatype = None
+        self.newcol_default_value = None
+        self.del_cols = None
+        self.del_rows = None
+        self.horizontal_headers = None
+        self.delcol_name = None
+        self.newtable_name = None
+        self.user_write_table_names = None
+        self.user_read_table_names = None
+        self.deltable_request = None
+        UserPage.request_handler(self, "get_init_data")
+        
+    def add_table(self):
+        dialog = AddTableDialog()
+        if dialog.exec_() == QDialog.Accepted:
+            self.newtable_name = dialog.get_table_name()
+            UserPage.request_handler(self, "add_table")
+    
+    def del_table(self):
+        if self.table_select_combobox.currentText() in self.user_write_table_names:
+            dialog = DeleteTableDialog(self.table_select_combobox.currentText())
+            if dialog.exec_() == QDialog.Accepted:
+                self.deltable_request = [dialog.get_table_name(), dialog.get_pass_input()]
+                UserPage.request_handler(self, "delete_table")
+
+    def add_column(self):
+        dialog = AddColumnDialog()
+        if dialog.exec_() == QDialog.Accepted:
+            self.newcol_name = dialog.get_column_name()
+            self.newcol_datatype = dialog.get_data_type()
+            self.newcol_default_value = dialog.get_default_value()
+            UserPage.request_handler(self, "add_column")
+    
+    def del_column(self):
+        dialog = DeleteColumnDialog(self.horizontal_headers)
+        if dialog.exec_() == QDialog.Accepted:
+            self.delcol_name = dialog.get_column_name()
+            UserPage.request_handler(self, "delete_column")
+    
+    def add_row(self):
+        dialog = AddRowDialog()
+        if dialog.exec_() == QDialog.Accepted:
+            self.add_row_id = dialog.get_row_id()
+            UserPage.request_handler(self, "add_row")
+
+    def del_row(self):
+        dialog = DeleteRowDialog()
+        if dialog.exec_() == QDialog.Accepted:
+            self.delete_row_id = dialog.get_row_id()
+            UserPage.request_handler(self, "delete_row")
 
     def commit_changes(self):
         table_data = {}
@@ -865,6 +869,39 @@ class UserPage(QDialog):
         except: pass
 
         UserPage.request_handler(self, "update_loaded_table")
+    
+    def execute_search(self):
+        search_text = self.search_lineEdit.text().lower()
+    
+        for row in range(self.loaded_table_edit.rowCount()):
+            row_hidden = True
+            
+            for col in range(self.loaded_table_edit.columnCount()):
+                item_text = self.loaded_table_edit.item(row, col).text().lower()
+                
+                if search_text in item_text:
+                    row_hidden = False
+                    break
+            
+            self.loaded_table_edit.setRowHidden(row, row_hidden)
+
+
+    
+    def clear_search(self):
+        for row in range(self.loaded_table_edit.rowCount()):
+            self.loaded_table_edit.showRow(row)
+    
+    #----------------------------------------------- CLIENT BACKEND FUNCTIONS -----------------------------------------
+    def search_toggler(self):
+        if self.search_pushButton.text() == "SEARCH":
+            self.search_pushButton.setText("UNDO")
+            self.search_lineEdit.setReadOnly(True)
+            UserPage.execute_search(self)
+        elif self.search_pushButton.text() == "UNDO":
+            self.search_pushButton.setText("SEARCH")
+            self.search_lineEdit.setReadOnly(False)
+            self.search_lineEdit.clear()
+            UserPage.clear_search(self)
 
     def read_order(self):
         if self.lastfirst_pushButton.text() == "Last":
