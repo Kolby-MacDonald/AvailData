@@ -11,14 +11,13 @@ from PyQt5.QtCore import Qt
 from PyQt5 import QtWidgets
 from PyQt5.uic import loadUi
 from dotenv import load_dotenv
-from PyQt5.QtWidgets import QDialog, QApplication, QTableWidgetItem, QAbstractItemView, QMessageBox, QWidget
-from PyQt5.QtWidgets import QLabel, QLineEdit, QPushButton, QVBoxLayout, QComboBox, QSpinBox, QDoubleSpinBox
 from Crypto.Cipher import AES
 from Crypto.Util.Padding import pad, unpad
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import padding
+from PyQt5.QtWidgets import QDialog, QApplication, QTableWidgetItem, QAbstractItemView, QMessageBox, QWidget, QLabel, QLineEdit, QPushButton, QVBoxLayout, QComboBox, QSpinBox, QDoubleSpinBox
 
 ################################################## LOG IN CLASS #######################################################
 
@@ -61,18 +60,14 @@ class LoginPage(QDialog):
                     CLIENT.connect((os.getenv("pub_ip"), int(os.getenv("pub_port"))))
 
                 AES_KEY = key_exchange_handler()
-
                 data = ["login", username, enc_password]
                 send_data(data)
-
                 response = receive_data()
-
 
                 if response == True:
                     self.open_user_page()
                 else:
                     close_connection()
-    
             except: 
                 try:
                     close_connection()
@@ -224,6 +219,8 @@ class DeleteColumnDialog(QDialog):
         self.name_input = QComboBox()
         self.name_label.setAlignment(Qt.AlignCenter)
 
+        if "id" in horizontal_headers:
+            horizontal_headers.remove("id")
         self.name_input.addItems(horizontal_headers)
 
         self.add_button = QPushButton("Confirm Delete?")
@@ -425,6 +422,67 @@ class DeleteRowDialog(QDialog):
 
     def get_row_id(self):
         return int(self.double_spinbox.value())
+    
+class AddTableDialog(QDialog):
+    def __init__(self):
+        super(AddTableDialog, self).__init__()
+
+        self.setWindowTitle("[ AvailData ]")
+        self.setFixedSize(300, 350)
+
+        self.name_label = QLabel("Enter Table Name:")
+        self.name_input = QLineEdit()
+        self.name_label.setAlignment(Qt.AlignCenter)
+        self.add_button = QPushButton("Confirm?")
+        self.cancel_button = QPushButton("Cancel")
+        self.add_button.clicked.connect(self.accept)
+        self.cancel_button.clicked.connect(self.reject)
+
+        layout = QVBoxLayout()
+        layout.addSpacing(5)
+        layout.addWidget(self.name_label)
+        layout.addWidget(self.name_input)
+        layout.addSpacing(10)
+        layout.addSpacing(30)
+        layout.addWidget(self.add_button)
+        layout.addWidget(self.cancel_button)
+        self.setLayout(layout)
+
+        self.setStyleSheet("""
+            QDialog {
+                color: white;
+                background-color:  rgb(35, 38, 39);
+            }
+            QLabel {
+                color: white;
+                font-size: 18px;
+            }
+            QLineEdit {
+                color: white;
+                padding: 5px;
+                border-radius: 10px;
+                background-color: rgba(0, 0, 0, 0.8);
+                font-size:16px;
+            }
+            QPushButton {
+                padding: 8px;
+                border: none;
+                border-radius: 10px;
+                font-size: 16px;
+                background-color: black;
+                color: green;
+            }
+
+            QPushButton:hover
+            {
+                color: black;
+                background: rgb(50, 200, 50);
+                font-size:18px;
+            }
+        """)
+
+    def get_table_name(self):
+        return self.name_input.text()
 
 class UserPage(QDialog):
 
@@ -438,15 +496,20 @@ class UserPage(QDialog):
         self.lastfirst_pushButton.clicked.connect(lambda: UserPage.read_order(self))
         self.commit_pushButton.clicked.connect(lambda: UserPage.commit_changes(self))
         self.page_pushButton.clicked.connect(lambda: UserPage.request_handler(self, "update_loaded_table"))
+        self.addtable_pushButton.clicked.connect(lambda: UserPage.add_table(self))
         self.addcol_pushButton.clicked.connect(lambda: UserPage.add_column(self))
         self.delcol_pushButton.clicked.connect(lambda: UserPage.del_column(self))
         self.addrow_pushButton.clicked.connect(lambda: UserPage.add_row(self))
         self.delrow_pushButton.clicked.connect(lambda: UserPage.del_row(self))
         self.refresh_pushButton.clicked.connect(lambda: UserPage.refresh_all(self))
-        UserPage.request_handler(self, "get_init_data")
+        UserPage.refresh_all(self)
 
     #----------------------------------------------- CLIENT REQUEST FUNCTIONS #---------------------------------------
-
+    def add_table(self):
+        dialog = AddTableDialog()
+        if dialog.exec_() == QDialog.Accepted:
+            self.newtable_name = dialog.get_table_name()
+            UserPage.request_handler(self, "add_table")
     
     def refresh_all(self):
         self.table_select_combobox.clear()
@@ -468,6 +531,7 @@ class UserPage(QDialog):
         self.del_rows = None
         self.horizontal_headers = None
         self.delcol_name = None
+        self.newtable_name = None
         UserPage.request_handler(self, "get_init_data")
 
     def add_column(self):
@@ -476,14 +540,12 @@ class UserPage(QDialog):
             self.newcol_name = dialog.get_column_name()
             self.newcol_datatype = dialog.get_data_type()
             self.newcol_default_value = dialog.get_default_value()
-            if self.newcol_name:
-                UserPage.request_handler(self, "add_column")
+            UserPage.request_handler(self, "add_column")
     
     def del_column(self):
         dialog = DeleteColumnDialog(self.horizontal_headers)
         if dialog.exec_() == QDialog.Accepted:
             self.delcol_name = dialog.get_column_name()
-            print(self.delcol_name)
             UserPage.request_handler(self, "delete_column")
     
     def add_row(self):
@@ -547,7 +609,6 @@ class UserPage(QDialog):
         
         elif request == "add_row":
             data = [request, self.table_select_combobox.currentText(), self.add_row_id]
-            print(f"data = {data}")
             send_data(data)
             response = receive_data()
             if response != True:
@@ -557,11 +618,27 @@ class UserPage(QDialog):
         elif request == "delete_row":
             data = [request, self.table_select_combobox.currentText(), self.delete_row_id]
             send_data(data)
-            print(data)
             response = receive_data()
             if response != True:
                 QMessageBox.information(self, "Failure", "Invalid Operation Detected", QMessageBox.Ok)
             self.request_handler("update_loaded_table")
+        
+        elif request == "add_table":
+            data = [request, self.newtable_name]
+            send_data(data)
+            response = receive_data()
+            if response != True:
+                QMessageBox.information(self, "Failure", "Invalid Operation Detected", QMessageBox.Ok)
+            elif response == True:
+                loc_newtable_name = self.newtable_name
+                self.refresh_all()
+                try:
+                    newtable_index = self.table_select_combobox.findText(loc_newtable_name)
+                    if newtable_index != -1:
+                        self.table_select_combobox.setCurrentIndex(newtable_index)
+                except: pass
+
+            #self.request_handler("update_loaded_table")
         
         elif request == "log_out":
             self.loaded_table_edit.clear()
@@ -584,7 +661,6 @@ class UserPage(QDialog):
             self.delrow_pushButton.setEnabled(False)
             self.readwrite_radioButton.setText(" LOCKED")
         
-        print(self.create_table_access)
         if self.create_table_access == "yes" or self.create_table_access == "true":
             self.addtable_pushButton.setEnabled(True)
         else:
@@ -698,10 +774,20 @@ class UserPage(QDialog):
         if self.readwrite_radioButton.isChecked():
             self.loaded_table_edit.setEditTriggers(QAbstractItemView.DoubleClicked | QAbstractItemView.EditKeyPressed)  # Enable editing
             self.loaded_table_edit.setSelectionMode(QAbstractItemView.ExtendedSelection)
+            self.addcol_pushButton.setEnabled(True)
+            self.delcol_pushButton.setEnabled(True)
+            self.addrow_pushButton.setEnabled(True)
+            self.delrow_pushButton.setEnabled(True)
+            self.commit_pushButton.setEnabled(True)
         elif not self.readwrite_radioButton.isChecked():
             self.loaded_table_edit.setEditTriggers(QAbstractItemView.NoEditTriggers)
             self.loaded_table_edit.setSelectionMode(QAbstractItemView.NoSelection)
             self.loaded_table_edit.clearSelection()
+            self.addcol_pushButton.setEnabled(False)
+            self.delcol_pushButton.setEnabled(False)
+            self.addrow_pushButton.setEnabled(False)
+            self.delrow_pushButton.setEnabled(False)
+            self.commit_pushButton.setEnabled(False)
     
     def keyPressEvent(self, event):
         if event.key() == Qt.Key_Escape:

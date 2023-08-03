@@ -1,10 +1,13 @@
+import re
 import os
 import ssl
 import json
+import time
+import math
 import socket
+import sqlite3
 import threading
 import pandas as pd
-import sqlite3
 from OpenSSL import crypto
 from dotenv import load_dotenv
 from Crypto.Cipher import AES
@@ -15,9 +18,6 @@ from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import padding
 from secrets import token_bytes
 
-import time
-import math
-import re
 
 ACTIVE_THREADS = {}
 TOTAL_CONNECTIONS = 0
@@ -28,7 +28,7 @@ def server_controller(client_sock, conn_ip, conn_num, thread_id):
     db = sqlite3.connect(f"database_container/{os.getenv('db_name')}")
     cursor = db.cursor()
     aes_key = key_exchange_handler(client_sock)
-    credentials = receive_data(client_sock, aes_key, conn_num, thread_id, None, None, None, None, None, None)
+    credentials = receive_data(client_sock, aes_key, conn_num, thread_id, None, None, None, None, None, None, None, None, None)
 
     cursor.execute(
         f"SELECT * FROM {os.getenv('db_table_name')} WHERE username = ? AND password = ?",
@@ -42,6 +42,7 @@ def server_controller(client_sock, conn_ip, conn_num, thread_id):
         job_title = results[2]
         db_role = results[3]
         username = results[4]
+        password = results[5]
         user_write_table_access = results[7]
         user_read_table_access = results[8]
         try:
@@ -54,7 +55,7 @@ def server_controller(client_sock, conn_ip, conn_num, thread_id):
         send_data(client_sock, aes_key, True)
         print(f"{user_db_id} | {employee_name}:{username} | {job_title}:{db_role} | has accessed the database.")
         receive_data(client_sock, aes_key, conn_num, thread_id, db, cursor, db_role, user_write_table_access,
-                      user_read_table_access, create_table_access)
+                      user_read_table_access, create_table_access, username, password, user_db_id)
     else:
         send_data(client_sock, aes_key, False)
         close_connection(client_sock, conn_num, thread_id, db)
@@ -105,7 +106,7 @@ def send_data(client_sock, aes_key, data):
         client_sock.sendall(chunk)
 
 
-def receive_data(client_sock, aes_key, conn_num, thread_id, db, cursor, db_role, user_write_table_access, user_read_table_access, create_table_access):
+def receive_data(client_sock, aes_key, conn_num, thread_id, db, cursor, db_role, user_write_table_access, user_read_table_access, create_table_access, username, password, user_db_id):
     comm_time = int(time.time())
     timeout = 10
     while True:
@@ -126,9 +127,7 @@ def receive_data(client_sock, aes_key, conn_num, thread_id, db, cursor, db_role,
                 remaining_bytes -= len(chunk)
             
             comm_time = int(time.time())
-
             data = aes_decrypt(data, aes_key)
-
             json_data = json.loads(data)
             request_type = json_data[0]
 
@@ -136,7 +135,7 @@ def receive_data(client_sock, aes_key, conn_num, thread_id, db, cursor, db_role,
                 return json_data
 
             elif request_type == "get_init_data":
-                user_table_names = init_data_response(client_sock, aes_key, cursor, db_role, user_write_table_access, user_read_table_access, create_table_access)
+                user_table_names = init_data_response(client_sock, aes_key, cursor, db_role, user_read_table_access, create_table_access, username, password, user_db_id)
                 user_write_table_names = user_table_names[0]
                 user_read_table_names = user_table_names[1]
 
@@ -170,11 +169,14 @@ def receive_data(client_sock, aes_key, conn_num, thread_id, db, cursor, db_role,
                 table_to_update = json_data[1]
                 position_of_row = json_data[2]
                 delete_row(client_sock, aes_key, cursor, table_to_update, position_of_row, user_write_table_names)
+            
+            elif request_type == "add_table":
+                new_table_name = json_data[1]
+                add_table(client_sock, aes_key, cursor, new_table_name, create_table_access, username, password, user_db_id, db_role)
 
             elif request_type == "log_out":
                 close_connection(client_sock, conn_num, thread_id, db)
                 break
-
         except:
             pass
         
@@ -186,9 +188,12 @@ def receive_data(client_sock, aes_key, conn_num, thread_id, db, cursor, db_role,
 
 ######################################## DATA MANIPULATION FUNCTIONS ###################################################
 
-def init_data_response(client_sock, aes_key, cursor, db_role, user_write_table_access, user_read_table_access, create_table_access):
+def init_data_response(client_sock, aes_key, cursor, db_role, user_read_table_access, create_table_access, username, password, user_db_id):
     cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
     database_table_names_curse = cursor.fetchall()
+
+    cursor.execute(f"SELECT write_access FROM {os.getenv('db_table_name')} WHERE username = ? AND password = ? and id = ?",(username, password, user_db_id))
+    user_write_table_access = cursor.fetchone()[0]
 
     database_table_names = []
     user_write_table_names = []
@@ -249,20 +254,16 @@ def update_loaded_table(client_sock, aes_key, cursor, user_write_table_names, us
 
             for column in columns:
                 column_names.append(column[1])
-            
             if result_select.isdigit():
                 cursor.execute(f'''SELECT * FROM {requested_table} LIMIT {int(result_select)} OFFSET {(int(page_select)-1)*int(result_select)}''')
-
             elif result_select.startswith("-") and result_select[1:].isdigit():
                 cursor.execute(f'''SELECT * FROM {requested_table} LIMIT {abs(int(result_select))} OFFSET {(total_rows - abs(int(result_select))) + (int(page_select)-1)*int(result_select)}''')
-
             else:
                 cursor.execute(f'''SELECT * FROM {requested_table} LIMIT 0''')
         
         df = pd.DataFrame(cursor.fetchall(), columns=column_names)
         df = df.to_dict()
         data = [df, page_select, total_pages]
-
     else: data = []
     send_data(client_sock, aes_key, data)
 
@@ -298,6 +299,7 @@ def add_column(client_sock, aes_key, cursor, table_to_update, update_data, user_
     newcol_data_type = update_data[1]
     newcol_default_value = update_data[2]
     validation = False
+    print(f"DEFAULT|{newcol_default_value}|")
     if table_to_update in user_write_table_names:
         try:
             if newcol_data_type in ["Text (All Characters)","Numbers (Integers & Decimals)","(In Beta) Blob (Images / Files)"]:
@@ -307,9 +309,12 @@ def add_column(client_sock, aes_key, cursor, table_to_update, update_data, user_
                     newcol_data_type = "NUMERIC"
                 elif newcol_data_type == "(In Beta) Blob (Images / Files)":
                     newcol_data_type = "BLOB"
-                    
+                
+                if newcol_default_value == '' or newcol_default_value == None:
+                    newcol_default_value = 'NULL'
+                
                 if re.match(r'^[a-zA-Z0-9_]+$', newcol_name) is not None:
-                    if re.match(r'^[a-zA-Z0-9_]+$', newcol_default_value) is not None or re.match(r'^-?\d+(\.\d+)?$', newcol_default_value) is not None:
+                    if re.match(r'^[a-zA-Z0-9_]+$', newcol_default_value) is not None or re.match(r'^-?\d+(\.\d+)?$', newcol_default_value) is not None or newcol_default_value == 'NULL':
                         #Just incase the regular expression doesn't catch an escape string for some reason.
                         newcol_name = newcol_name.replace("'", "X")
                         newcol_name = newcol_name.replace('"', "X")
@@ -337,14 +342,16 @@ def add_row(client_sock, aes_key, cursor, table_to_update, position_of_row, user
     validation = False
     if table_to_update in user_write_table_names:
         try:
-            cursor.execute(f"SELECT MAX(id) FROM {table_to_update}")
-            max_id = cursor.fetchone()[0]
-
-            cursor.execute(f"UPDATE {table_to_update} SET id = id + {max_id} + 1 WHERE id >= ?", (position_of_row,))
+            try:
+                cursor.execute(f"SELECT MAX(id) FROM {table_to_update}")
+                max_id = cursor.fetchone()[0]
+                cursor.execute(f"UPDATE {table_to_update} SET id = id + {max_id} + 1 WHERE id >= ?", (position_of_row,))
+            except: pass
             cursor.execute(f"INSERT INTO {table_to_update} (id) VALUES (?)", (position_of_row,))
-            cursor.execute(f"UPDATE {table_to_update} SET id = id - {max_id} WHERE id > ?", (position_of_row,))
+            try:
+                cursor.execute(f"UPDATE {table_to_update} SET id = id - {max_id} WHERE id > ?", (position_of_row,))
+            except: pass
             cursor.connection.commit()
-
             validation = True
         except Exception as e:
             print(e)
@@ -352,9 +359,7 @@ def add_row(client_sock, aes_key, cursor, table_to_update, position_of_row, user
     send_data(client_sock, aes_key, validation)
 
 def delete_row(client_sock, aes_key, cursor, table_to_update, position_of_row, user_write_table_names):
-    print("here")
     validation = False
-    
     if table_to_update in user_write_table_names:
         try:          
             cursor.execute(f"DELETE FROM {table_to_update} WHERE id = ?", (position_of_row,))
@@ -362,8 +367,37 @@ def delete_row(client_sock, aes_key, cursor, table_to_update, position_of_row, u
             validation = True
         except Exception as e:
             print(e)
-    
     send_data(client_sock, aes_key, validation)
+
+def add_table(client_sock, aes_key, cursor, new_table_name, create_table_access, username, password, user_db_id, db_role):
+    validation = False
+    print(new_table_name)
+    print(username)
+    print(password)
+    print(user_db_id)
+    try:
+        if create_table_access == "yes":
+            cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
+            table_names = cursor.fetchall()
+            current_table_names = []
+            for tables in table_names:
+                current_table_names.append(tables[0])
+            
+            if new_table_name not in current_table_names:
+                if re.match(r'^[a-zA-Z0-9_]+$', new_table_name) is not None:
+                    new_table_name = new_table_name.replace("'", "X")
+                    new_table_name = new_table_name.replace('"', "X")
+                    cursor.execute(f'''CREATE TABLE {new_table_name} (id INTEGER PRIMARY KEY AUTOINCREMENT)''')
+                    if db_role != "admin":
+                        cursor.execute(f'''SELECT write_access FROM {os.getenv('db_table_name')} WHERE username = ? AND password = ? AND id = ?''', (username, password, user_db_id))
+                        new_write_access = cursor.fetchone()
+                        new_write_access = f'{new_write_access[0]}, {new_table_name}'
+                        cursor.execute(f'''UPDATE {os.getenv('db_table_name')} SET write_access = ? WHERE username = ? AND password = ? AND id = ?''', (new_write_access, username, password, user_db_id))
+                    cursor.connection.commit()
+                    validation = True
+    except: pass
+    send_data(client_sock, aes_key, validation)
+    
 
 
 
