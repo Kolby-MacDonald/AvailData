@@ -86,13 +86,11 @@ def aes_encrypt(data, aes_key):
     enc_data = cipher.encrypt(padded_json_data)
     return enc_data
 
-
 def aes_decrypt(enc_data, aes_key):
     cipher = AES.new(aes_key, AES.MODE_ECB)
     padded_enc_data = cipher.decrypt(enc_data)
     json_data = unpad(padded_enc_data, AES.block_size)
     return json_data.decode()
-
 
 def send_data(client_sock, aes_key, data):
     json_data = json.dumps(data)
@@ -104,7 +102,6 @@ def send_data(client_sock, aes_key, data):
     client_sock.sendall(header)
     for chunk in chunks:
         client_sock.sendall(chunk)
-
 
 def receive_data(client_sock, aes_key, conn_num, thread_id, db, cursor, db_role, user_write_table_access, user_read_table_access, create_table_access, username, password, user_db_id):
     comm_time = int(time.time())
@@ -177,6 +174,10 @@ def receive_data(client_sock, aes_key, conn_num, thread_id, db, cursor, db_role,
             elif request_type == "log_out":
                 close_connection(client_sock, conn_num, thread_id, db)
                 break
+
+            elif request_type == "delete_table":
+                del_table_data = json_data[1]
+                delete_table(client_sock, aes_key, cursor, del_table_data, user_write_table_names, password)
         except:
             pass
         
@@ -184,7 +185,6 @@ def receive_data(client_sock, aes_key, conn_num, thread_id, db, cursor, db_role,
         if current_time - comm_time > timeout:
             close_connection(client_sock, conn_num, thread_id, db)
             break
-
 
 ######################################## DATA MANIPULATION FUNCTIONS ###################################################
 
@@ -397,8 +397,20 @@ def add_table(client_sock, aes_key, cursor, new_table_name, create_table_access,
                     validation = True
     except: pass
     send_data(client_sock, aes_key, validation)
-    
 
+def delete_table(client_sock, aes_key, cursor, del_table_data, user_write_table_names, password):
+    validation = False
+    try:
+        print("Attempting to delete")
+        safe_tables =  ['sqlite_master', 'sqlite_sequence', 'sqlite_stat', 'sqlite_temp_master', str(os.getenv('db_table_name')), str(os.getenv('db_firewall_name'))]
+        del_table_name = del_table_data[0]
+        attempted_pass = del_table_data[1]
+        if del_table_name not in safe_tables:
+            if attempted_pass == password and del_table_name in user_write_table_names:
+                cursor.execute(f"DROP TABLE {del_table_name};")
+                validation = True
+    except: pass
+    send_data(client_sock, aes_key, validation)
 
 
 ######################################## SOCKET SECURITY LAYER #######################################################
@@ -425,21 +437,18 @@ def close_connection(client_sock, conn_num, thread_id, db):
     print(f"Connection {conn_num} closed.")
 
 def generate_ssl_certificate(cert_file, key_file):
-    # Create a new key pair
     key = crypto.PKey()
     key.generate_key(crypto.TYPE_RSA, 2048)
 
-    # Create a self-signed certificate
     cert = crypto.X509()
     cert.get_subject().CN = "AvailData"
     cert.set_serial_number(1000)
     cert.gmtime_adj_notBefore(0)
-    cert.gmtime_adj_notAfter(365 * 24 * 60 * 60)  # Valid for 1 year
+    cert.gmtime_adj_notAfter(365 * 24 * 60 * 60)
     cert.set_issuer(cert.get_subject())
     cert.set_pubkey(key)
     cert.sign(key, "sha256")
 
-    # Save the certificate and private key to files
     with open(cert_file, "wb") as cert_file:
         cert_file.write(crypto.dump_certificate(crypto.FILETYPE_PEM, cert))
 
@@ -488,7 +497,7 @@ def main():
         create_thread = True
         if firewall_enabled == "true":
             print("Firewall enabled")
-            cursor.execute("SELECT is_blocked FROM a001_firewall WHERE ip_address = ?", (addr[0],))
+            cursor.execute(f"SELECT is_blocked FROM {os.getenv('db_firewall_name')} WHERE ip_address = ?", (addr[0],))
             result = cursor.fetchone()
 
             if result is not None:
