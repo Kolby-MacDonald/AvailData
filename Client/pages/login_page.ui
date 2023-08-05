@@ -49,7 +49,7 @@ background-position: center;
      <property name="minimumSize">
       <size>
        <width>360</width>
-       <height>331</height>
+       <height>340</height>
       </size>
      </property>
      <property name="font">
@@ -125,8 +125,8 @@ border-radius:60px;
       </property>
       <property name="geometry">
        <rect>
-        <x>230</x>
-        <y>260</y>
+        <x>240</x>
+        <y>280</y>
         <width>101</width>
         <height>41</height>
        </rect>
@@ -145,7 +145,7 @@ border-radius:60px;
       <property name="geometry">
        <rect>
         <x>20</x>
-        <y>150</y>
+        <y>170</y>
         <width>321</width>
         <height>41</height>
        </rect>
@@ -167,7 +167,7 @@ border-radius:60px;
       <property name="geometry">
        <rect>
         <x>20</x>
-        <y>200</y>
+        <y>220</y>
         <width>321</width>
         <height>41</height>
        </rect>
@@ -191,8 +191,8 @@ border-radius:60px;
       </property>
       <property name="geometry">
        <rect>
-        <x>30</x>
-        <y>260</y>
+        <x>20</x>
+        <y>280</y>
         <width>101</width>
         <height>41</height>
        </rect>
@@ -208,7 +208,7 @@ border-radius:60px;
       <property name="geometry">
        <rect>
         <x>0</x>
-        <y>40</y>
+        <y>20</y>
         <width>361</width>
         <height>71</height>
        </rect>
@@ -232,6 +232,56 @@ background-image: url(&quot;C:/Users/deadb/Documents/GitHub/AvailData/login_page
       </property>
       <property name="text">
        <string>[ AvailData ]</string>
+      </property>
+     </widget>
+     <widget class="QLineEdit" name="domain_line_edit">
+      <property name="enabled">
+       <bool>true</bool>
+      </property>
+      <property name="geometry">
+       <rect>
+        <x>20</x>
+        <y>110</y>
+        <width>201</width>
+        <height>41</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string/>
+      </property>
+      <property name="alignment">
+       <set>Qt::AlignCenter</set>
+      </property>
+      <property name="placeholderText">
+       <string>Server Domain</string>
+      </property>
+      <property name="clearButtonEnabled">
+       <bool>false</bool>
+      </property>
+     </widget>
+     <widget class="QLineEdit" name="port_line_edit">
+      <property name="enabled">
+       <bool>true</bool>
+      </property>
+      <property name="geometry">
+       <rect>
+        <x>230</x>
+        <y>110</y>
+        <width>111</width>
+        <height>41</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string/>
+      </property>
+      <property name="alignment">
+       <set>Qt::AlignCenter</set>
+      </property>
+      <property name="placeholderText">
+       <string>Port</string>
+      </property>
+      <property name="clearButtonEnabled">
+       <bool>false</bool>
       </property>
      </widget>
     </widget>

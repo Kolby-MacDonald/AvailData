@@ -20,16 +20,23 @@ from cryptography.hazmat.primitives.asymmetric import padding
 from PyQt5.QtWidgets import QDialog, QApplication, QTableWidgetItem, QAbstractItemView, QMessageBox, QWidget, QLabel, QLineEdit, QPushButton, QVBoxLayout, QComboBox, QSpinBox, QDoubleSpinBox
 
 CONNECTION_STATUS = False
+DOMAIN = ""
+PORT = ""
+
 
 ################################################## LOG IN CLASS #######################################################
 
 class LoginPage(QDialog):
     def __init__(self):
         super(LoginPage,self).__init__()
-        loadUi(r'Client\pages\login_page.ui', self)
+        loadUi(r'pages\login_page.ui', self)
         self.login_button.clicked.connect(self.login_function)
         self.signup_button.clicked.connect(self.open_signup_page)
         self.linkedin_button.clicked.connect(self.open_linkedin)
+        self.domain_line_edit.textChanged.connect(self.change_domain)
+        self.port_line_edit.textChanged.connect(self.change_port)
+        self.domain_line_edit.setText(os.getenv('pub_ip'))
+        self.port_line_edit.setText(os.getenv('pub_port'))
 
     def login_function(self):
         global CONNECTION_STATUS
@@ -56,6 +63,16 @@ class LoginPage(QDialog):
                 try:
                     close_connection()
                 except: pass
+    
+    def change_domain(self):
+        global DOMAIN, CONNECTION_STATUS
+        DOMAIN = self.domain_line_edit.text()
+        CONNECTION_STATUS = False
+    
+    def change_port(self):
+        global PORT, CONNECTION_STATUS
+        PORT = self.port_line_edit.text()
+        CONNECTION_STATUS = False
 
     def open_linkedin(self):
         webbrowser.open('www.linkedin.com/in/kolby-macdonald')
@@ -80,7 +97,7 @@ class LoginPage(QDialog):
 class SignUpPage(QDialog): 
     def __init__(self):
         super(SignUpPage,self).__init__()
-        loadUi(r'Client\pages\signup_page.ui',self)
+        loadUi(r'pages\signup_page.ui',self)
         self.submit_button.clicked.connect(self.signup_function)
         self.return_button.clicked.connect(self.open_login_page)
 
@@ -599,7 +616,7 @@ class DeleteTableDialog(QDialog):
 class UserPage(QDialog):
     def __init__(self):
         super(UserPage, self).__init__()
-        loadUi(r'Client\pages\user_page_test.ui', self)
+        loadUi(r'pages\user_page.ui', self)
         self.table_select_combobox.currentIndexChanged.connect(lambda: UserPage.request_handler(self, "update_loaded_table"))
         self.result_select_combobox.currentIndexChanged.connect(lambda: UserPage.request_handler(self, "update_loaded_table"))
         self.logout_button.clicked.connect(lambda: UserPage.request_handler(self, "log_out"))
@@ -698,7 +715,6 @@ class UserPage(QDialog):
                 except: pass
         
         elif request == "delete_table":
-            print("sending to delete table")
             data = [request, self.deltable_request]
             send_data(data)
             response = receive_data()
@@ -1088,7 +1104,7 @@ def attempt_to_connect():
                 cert_file = str(os.getenv("ca_cert_file"))
                 key_file =  str(os.getenv("ca_key_file"))
                 context.load_cert_chain(certfile=cert_file, keyfile=key_file)
-                CLIENT.connect((os.getenv("pub_ip"), int(os.getenv("pub_port"))))
+                CLIENT.connect((DOMAIN, int(PORT)))
                 context.load_verify_locations(str(os.getenv("ca_verify_file")))
             else:
                 cert_file = str(os.getenv("gen_cert_file"))
@@ -1097,7 +1113,7 @@ def attempt_to_connect():
                 context.load_cert_chain(certfile=cert_file, keyfile=key_file)
                 context.verify_mode = ssl.CERT_NONE
                 CLIENT = context.wrap_socket(CLIENT)
-                CLIENT.connect((os.getenv("pub_ip"), int(os.getenv("pub_port"))))
+                CLIENT.connect((DOMAIN, int(PORT)))
 
             AES_KEY = key_exchange_handler()
             CONNECTION_STATUS = True

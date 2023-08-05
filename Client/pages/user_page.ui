@@ -104,7 +104,7 @@ text-align: center;
       <property name="font">
        <font>
         <family>Trebuchet MS</family>
-        <pointsize>-1</pointsize>
+        <pointsize>1</pointsize>
        </font>
       </property>
       <property name="styleSheet">
@@ -151,7 +151,7 @@ font-size:19px;</string>
       <property name="font">
        <font>
         <family>Trebuchet MS</family>
-        <pointsize>-1</pointsize>
+        <pointsize>1</pointsize>
        </font>
       </property>
       <property name="styleSheet">
@@ -177,7 +177,7 @@ font-size:19px;</string>
       <property name="font">
        <font>
         <family>Trebuchet MS</family>
-        <pointsize>-1</pointsize>
+        <pointsize>1</pointsize>
        </font>
       </property>
       <property name="layoutDirection">
@@ -842,7 +842,7 @@ font-size:20px;
       <property name="font">
        <font>
         <family>Trebuchet MS</family>
-        <pointsize>-1</pointsize>
+        <pointsize>1</pointsize>
        </font>
       </property>
       <property name="styleSheet">
@@ -870,7 +870,7 @@ background-color: blue;
       <property name="font">
        <font>
         <family>Trebuchet MS</family>
-        <pointsize>-1</pointsize>
+        <pointsize>1</pointsize>
        </font>
       </property>
       <property name="styleSheet">
@@ -953,7 +953,7 @@ background-color: blue;
       <property name="font">
        <font>
         <family>Trebuchet MS</family>
-        <pointsize>-1</pointsize>
+        <pointsize>1</pointsize>
        </font>
       </property>
       <property name="layoutDirection">

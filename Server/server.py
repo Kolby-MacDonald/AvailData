@@ -264,13 +264,20 @@ def init_data_response(client_sock, aes_key, cursor, db_role, user_read_table_ac
     # Read Control---------------------------------------------------------------------------
 
     if user_read_table_access == "all" and db_role != "admin":
-        user_read_table_access == database_table_names
+        user_read_table_access = database_table_names
 
     elif type(user_read_table_access) == type(''):
         apparent_table_names = user_read_table_access.split(', ')
         for table_name in apparent_table_names:
             if table_name in database_table_names and table_name not in user_read_table_names and table_name not in user_write_table_names:
                 user_read_table_names.append(str(table_name))
+    
+    if os.getenv('db_table_name') in user_write_table_names:
+        user_write_table_names.remove(os.getenv('db_table_name'))
+        user_write_table_names.insert(0, os.getenv('db_table_name'))
+    if os.getenv('db_firewall_name') in user_write_table_names:
+        user_write_table_names.remove(os.getenv('db_firewall_name'))
+        user_write_table_names.insert(1, os.getenv('db_firewall_name'))
 
     data = [user_write_table_names, user_read_table_names, create_table_access]
     send_data(client_sock, aes_key, data)
