@@ -102,7 +102,7 @@ class SignUpPage(QDialog):
         self.return_button.clicked.connect(self.open_login_page)
 
     def signup_function(self):
-
+        global CONNECTION_STATUS
         password = self.password_line_edit.text()
         confirm_password = self.confirm_password_line_edit.text()
 
@@ -142,6 +142,8 @@ class SignUpPage(QDialog):
                     QMessageBox.information(self, "Failure", "Invalid Operation", QMessageBox.Ok)
             else:QMessageBox.information(self, "Failure", pass_error, QMessageBox.Ok)
         else: QMessageBox.information(self, "Failure", "Passwords Don't Match", QMessageBox.Ok)
+
+        CONNECTION_STATUS = False
     
     def open_login_page(self):
         self.username_line_edit.clear()

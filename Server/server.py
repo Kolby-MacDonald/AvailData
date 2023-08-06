@@ -72,6 +72,7 @@ def server_controller(client_sock, conn_ip, conn_num, thread_id):
 
             elif response[0] == "sign_up":
                 validate_sign_up(client_sock, aes_key, cursor, response[1][1])
+                close_connection(client_sock, conn_num, thread_id, db)
             
     except: pass
 
