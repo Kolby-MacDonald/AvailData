@@ -533,16 +533,18 @@ def main():
 
     while True:
         client_sock, addr = ssl_server_socket.accept()
-        print(f"incoming connection by: {addr}")
+        print(f"Incoming connection by: {addr}")
 
         #test if firewall enabled
         create_thread = True
         if firewall_enabled == "true":
-            print("Firewall enabled")
+            print("Firewall enabled: ")
             cursor.execute(f"SELECT is_blocked FROM {os.getenv('db_firewall_name')} WHERE ip_address = ?", (addr[0],))
             result = cursor.fetchone()
 
-            if result is not None:
+            if result is None:
+                create_thread = False
+            else:
                 is_blocked = result[0]
                 if is_blocked:
                     close_connection(client_sock, None, None, None)
