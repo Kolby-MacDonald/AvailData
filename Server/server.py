@@ -25,7 +25,7 @@ LOCK = threading.Lock()
 
 # Primary function controller.
 def server_controller(client_sock, conn_ip, conn_num, thread_id):
-    db = sqlite3.connect(f"database_container/{os.getenv('db_name')}")
+    db = sqlite3.connect(f"{os.getenv('db_name')}")
     cursor = db.cursor()
     aes_key = key_exchange_handler(client_sock)
     try:
@@ -235,9 +235,11 @@ def receive_data(client_sock, aes_key, conn_num, thread_id, db, cursor, db_role,
 ######################################## DATA MANIPULATION FUNCTIONS ###################################################
 
 def init_data_response(client_sock, aes_key, cursor, db_role, user_read_table_access, create_table_access, username, password, user_db_id):
+
     cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
     database_table_names_curse = cursor.fetchall()
 
+    #write_table
     cursor.execute(f"SELECT write_access FROM {os.getenv('db_table_name')} WHERE username = ? AND password = ? and id = ?",(username, password, user_db_id))
     user_write_table_access = cursor.fetchone()[0]
 
@@ -250,7 +252,6 @@ def init_data_response(client_sock, aes_key, cursor, db_role, user_read_table_ac
 
     untouchable_tables = ['sqlite_master', 'sqlite_sequence', 'sqlite_stat', 'sqlite_temp_master']
     database_table_names= [table for table in database_table_names if all(unt_table not in table for unt_table in untouchable_tables)]
-
     # Write control-------------------------------------------------------------------------------
 
     if user_write_table_access == "all" or db_role == "admin":
@@ -380,7 +381,7 @@ def add_column(client_sock, aes_key, cursor, table_to_update, update_data, user_
 
 def delete_column(client_sock, aes_key, cursor, table_to_update, column_to_delete, user_write_table_names):
     validation = False
-    if table_to_update in user_write_table_names:
+    if table_to_update in user_write_table_names and table_to_update != "a000_users_table":
         try:
             cursor.execute(f"ALTER TABLE {table_to_update} DROP COLUMN {column_to_delete};")
             cursor.connection.commit()
@@ -409,7 +410,7 @@ def add_row(client_sock, aes_key, cursor, table_to_update, position_of_row, user
 
 def delete_row(client_sock, aes_key, cursor, table_to_update, position_of_row, user_write_table_names):
     validation = False
-    if table_to_update in user_write_table_names:
+    if table_to_update in user_write_table_names and table_to_update != "a000_users_table":
         try:          
             cursor.execute(f"DELETE FROM {table_to_update} WHERE id = ?", (position_of_row,))
             cursor.connection.commit()        
@@ -433,6 +434,7 @@ def add_table(client_sock, aes_key, cursor, new_table_name, create_table_access,
                     new_table_name = new_table_name.replace('"', "X")
                     cursor.execute(f'''CREATE TABLE {new_table_name} (id INTEGER PRIMARY KEY AUTOINCREMENT)''')
                     if db_role != "admin":
+                        #write_access
                         cursor.execute(f'''SELECT write_access FROM {os.getenv('db_table_name')} WHERE username = ? AND password = ? AND id = ?''', (username, password, user_db_id))
                         new_write_access = cursor.fetchone()
                         new_write_access = f'{new_write_access[0]}, {new_table_name}'
@@ -445,7 +447,7 @@ def add_table(client_sock, aes_key, cursor, new_table_name, create_table_access,
 def delete_table(client_sock, aes_key, cursor, del_table_data, user_write_table_names, password):
     validation = False
     try:
-        safe_tables =  ['sqlite_master', 'sqlite_sequence', 'sqlite_stat', 'sqlite_temp_master', str(os.getenv('db_table_name')), str(os.getenv('db_firewall_name'))]
+        safe_tables =  ['sqlite_master', 'sqlite_sequence', 'sqlite_stat', 'sqlite_temp_master', str(os.getenv('db_table_name')), str(os.getenv('db_firewall_name')), 'a000_users_table']
         del_table_name = del_table_data[0]
         attempted_pass = del_table_data[1]
         if del_table_name not in safe_tables:
@@ -524,7 +526,7 @@ def main():
     ssl_server_socket = context.wrap_socket(server_socket, server_side=True)
     ssl_server_socket.listen()
 
-    db = sqlite3.connect(f"database_container/{os.getenv('db_name')}")
+    db = sqlite3.connect(f"{os.getenv('db_name')}")
     cursor = db.cursor()
 
     # GUARANTEE FIREWALL IS SET PROPERLY
